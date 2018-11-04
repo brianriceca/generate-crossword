@@ -1,4 +1,14 @@
 #!/usr/local/bin/python3
+'''
+Geometry:
+  
+    0 1 2 ... width-1
+   0
+   1
+   2
+   ...
+   height-1
+'''
 
 directionlist = ( 
         (1,0),          # forwards
@@ -26,4 +36,26 @@ def solve(puzzlestate, wordlist):
             if solve(puzzlestate2,rest_of_wordlist):
               return True
     return False
+
+def main():
+  if len(sys.argv) != 4 or int(sys.argv[1]) < 1 or int(sys.argv[2]) < 1:
+  	print("usage: %s height width wordlistfile\n" % sys.argv[0])
+  	sys.exit(1)
+	
+  height = sys.argv[1]
+  width = sys.argv[2]
+  wordlistfile = sys.argv[3]	
+
+  wordlist = ()
+	
+  try:
+  	with open(wordlistfile,'rb') as f:
+  		wordlist = f.readlines()
+  except IOError:
+  	print("%s: couldn't open wordlistfile %s\n" % (sys.argv[0], wordlistfile))
+  	sys.exit(2)
+
+
+if __name__ == "__main__":
+    main()
 

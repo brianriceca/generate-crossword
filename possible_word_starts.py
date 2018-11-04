@@ -1,4 +1,14 @@
 #!/usr/local/bin/python3
+'''
+Geometry:
+	
+	  0 1 2 ... width-1
+   0
+   1
+   2
+   ...
+   height-1
+'''
 
 def possible_word_starts(maxx, maxy, word, direction):
     positionlist = []
