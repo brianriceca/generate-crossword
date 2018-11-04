@@ -17,15 +17,15 @@ class puzzlestate:
     self.width = width
     self.layout = [[None for i in range(width)] for j in range(height)]
     self.wordsused = []
-  def getheight():
+  def getheight(self):
     return self.height
-  def getwidth():
+  def getwidth(self):
     return self.width
-  def getwordsused():
+  def getwordsused(self):
     return self.wordsused
-  def getchar(x,y):
+  def getchar(self,x,y):
     return self.layout[y][x]
-  def inscribe_word(word,location,direction):
+  def inscribe_word(self,word,location,direction):
     thisx,thisy = location
     xincrement,yincrement = direction
     for i,c in enumerate(word):
@@ -41,7 +41,7 @@ class puzzlestate:
     return True     
 
 def main():
-  mypuzzlestate = puzzlestate(6,6)
+  mypuzzlestate = puzzlestate(6,5)
   location = [ 0, 0 ]
   direction = [ 1, 0 ]
   if mypuzzlestate.inscribe_word("hello",location,direction):
