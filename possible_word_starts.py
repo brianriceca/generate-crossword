@@ -1,26 +1,24 @@
 #!/usr/local/bin/python3
 
-import random
-import sys
-
-directionlist = ( 
-        (1,0),          # forwards
-        (1,1),          # diagonal up forwards
-        (0,1),          # up
-        (-1,1),         # diagonal up backwards
-        (-1,0),         # backwards
-        (-1,-1),        # diagonal down backwards
-        (0,-1),         # down
-        (1,-1)          # diagonal down forwards
-)
-
-def possible_word_starts(maxx, maxy):
+def possible_word_starts(maxx, maxy, word, direction):
     positionlist = []
-    for i in range(maxx):
-        for j in range(maxy):
-            for d in directionlist:
-                newloc = (i,j,d)
-                positionlist.append(newloc)
+    minx = miny = 0
+    if direction[0] == 0:
+      pass
+    elif direction[0] == -1:
+      pass
+    else:
+      maxx = maxx - len(word)
+    if direction[1] == 0:
+      miny = 
+    elif direction[1] == -1:
+      miny = 
+    else:
+      miny = 
+    for i in range(minx,maxx):
+      for j in range(minx,maxy):
+        newloc = (i,j)
+        positionlist.append(newloc)
     random.shuffle(positionlist)
     while 1:
         try:
@@ -29,7 +27,7 @@ def possible_word_starts(maxx, maxy):
             yield [ -1, -1, (0, 0) ]
 
 def main():
-    for counter, mystart in enumerate(randomstarts(4,5)):
+    for counter, mystart in enumerate(possible_word_starts(4,5,"foo", (0,1) )):
         print (counter, mystart)
         if mystart[0] == -1:
             sys.exit(1)
