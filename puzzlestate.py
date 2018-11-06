@@ -3,12 +3,23 @@
 '''
 Geometry:
   
-    0 1 2 ... width-1
-   0
-   1
-   2
-   ...
+          0
+          1
+          2
+        ...
    height-1
+             0 1 2 ... width-1
+
+directionlist = ( 
+        (1,0),          # forwards
+        (1,-1),          # diagonal up forwards
+        (0,-1),          # up
+        (-1,-1),         # diagonal up backwards
+        (-1,0),         # backwards
+        (-1,1),        # diagonal down backwards
+        (0,1),         # down
+        (1,1)          # diagonal down forwards
+)
 '''
 
 class puzzlestate:
@@ -28,26 +39,51 @@ class puzzlestate:
   def inscribe_word(self,word,location,direction):
     thisx,thisy = location
     xincrement,yincrement = direction
-    for i,c in enumerate(word):
+    for c in word:
+      if thisx < 0 or thisx >= self.width or thisy < 0 or thisy >= self.height:
+        return False
       if self.layout[thisy][thisx] == c:
-        pass
+        pass # Yay! It's already the character we want.
       elif self.layout[thisy][thisx] == None:
-         self.layout[thisy][thisx] = c
+        self.layout[thisy][thisx] = c
       else:
         return False
       thisx = thisx + xincrement   
       thisy = thisy + yincrement   
     self.wordsused.append(word)
+    print(self.layout)
     return True     
+  def print(self):
+    for i in range(self.height):
+      for j in range(self.width):
+        c = self.layout[i][j]
+        if c:
+          print("{0:s} ".format(c), end='')
+        else:
+          print('* ', end='')
+      print()
 
 def main():
-  mypuzzlestate = puzzlestate(6,5)
+  height = 5
+  width = 6
+  p = puzzlestate(height,width)
   location = [ 0, 0 ]
   direction = [ 1, 0 ]
-  if mypuzzlestate.inscribe_word("hello",location,direction):
+  if p.inscribe_word("super",location,direction):
     print("success")
   else:
     print("failure")
+  location = [ 2, 1 ]
+  direction = [ 0, -1 ]
+  if p.inscribe_word("up",location,direction):
+    print("success")
+  else:
+    print("failure")
+  print(p.getchar(0,0))
+  print(p.getchar(0,1))
+  print(p.getchar(1,1))
+  p.print()
 
 if __name__ == '__main__':
     main()
+#!/usr/local/bin/python3
