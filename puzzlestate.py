@@ -62,6 +62,39 @@ class puzzlestate:
         else:
           print('* ', end='')
       print()
+  def possible_word_starts(self, word, direction):
+    positionlist = []
+    minx = 0
+    maxx = self.width - 1
+    miny = 0
+    maxy = self.height - 1
+    if direction[0] == 0:
+      pass
+    elif direction[0] == -1:
+      pass
+    elif direction[0] == 1:
+      maxx = maxx - len(word)
+    else:
+      throw ValueError("direction[0] can't be this value",direction[0])
+    if direction[1] == 0:
+      miny = 
+    elif direction[1] == -1:
+      miny = 
+    elif direction[1] == 1:
+      miny = 
+    else:
+      throw ValueError("direction[1] can't be this value",direction[1])
+    for i in range(minx,maxx):
+      for j in range(minx,maxy):
+        newloc = (i,j)
+        positionlist.append(newloc)
+    random.shuffle(positionlist)
+    while 1:
+        try:
+            yield positionlist.pop()
+        except IndexError:
+            yield [ -1, -1, (0, 0) ]
+
 
 def main():
   height = 5
@@ -86,4 +119,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-#!/usr/local/bin/python3
+
