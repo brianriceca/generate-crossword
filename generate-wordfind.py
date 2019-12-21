@@ -1,5 +1,9 @@
-#!/usr/local/bin/python3
+#!/usr/bin/python3
 '''
+generate-wordfind.py: create a hidden-word puzzle
+
+usage: generate-wordfind.py height width wordlistfile
+
 Geometry:
   
    0
@@ -9,6 +13,8 @@ Geometry:
    height-1
              0 1 2 ... width-1
 '''
+
+import sys
 
 directionlist = ( 
         (1,0),          # forwards
@@ -32,28 +38,35 @@ def solve(puzzlestate, wordlist):
         for trylocation in possible_word_starts(puzzlestate,tryword,trydirection):
          puzzlestate2 = copy(puzzlestate)
          if inscribe_word(puzzlestate2,tryword,trylocation):
-            if solve(puzzlestate2,rest_of_wordlist):
+           if solve(puzzlestate2,rest_of_wordlist):
               return True
     return False
 
 def main():
   if len(sys.argv) != 4 or int(sys.argv[1]) < 1 or int(sys.argv[2]) < 1:
-  	print("usage: %s height width wordlistfile\n" % sys.argv[0])
-  	sys.exit(1)
-	
-  height = sys.argv[1]
-  width = sys.argv[2]
-  wordlistfile = sys.argv[3]	
+    print("usage: {} height width wordlistfile".format(sys.argv[0]))
+    sys.exit(1)
+  
+  height = int(sys.argv[1])
+  width = int(sys.argv[2])
+  wordlistfile = sys.argv[3]  
 
   wordlist = ()
-	
+  
   try:
-  	with open(wordlistfile,'rb') as f:
-  		wordlist = f.readlines()
+    with open(wordlistfile,'rb') as f:
+      wordlist = f.readlines()
   except IOError:
-  	print("%s: couldn't open wordlistfile %s\n" % (sys.argv[0], wordlistfile))
-  	sys.exit(2)
+    print("{}: couldn't open wordlistfile {}".format(sys.argv[0], wordlistfile))
+    sys.exit(2)
 
+  maxlen = len(max(wordlist,key=len))
+  if maxlen > height and maxlen > width:
+    print("{}: wordlistfile {} contains a word that won't fit in the puzzle".format(sys.argv[0], wordlistfile))
+    sys.exit(3)
+
+  sys.exit(0)
+    
   p = puzzlestate(height,width)
 
   if solve(p,wordlist):
