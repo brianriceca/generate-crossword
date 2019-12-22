@@ -27,6 +27,9 @@ directionlist = (
         (1,1)          # diagonal down forwards
 )
 
+def stripwhitespace(s):
+  return s.strip()
+
 def solve(puzzlestate, wordlist):
 
     if not wordlist:
@@ -51,7 +54,7 @@ def main():
   width = int(sys.argv[2])
   wordlistfile = sys.argv[3]  
 
-  wordlist = ()
+  wordlist = []
   
   try:
     with open(wordlistfile,'rb') as f:
@@ -60,10 +63,19 @@ def main():
     print("{}: couldn't open wordlistfile {}".format(sys.argv[0], wordlistfile))
     sys.exit(2)
 
-  maxlen = len(max(wordlist,key=len))
+  for w in wordlist:
+    print("\"{}\"".format(w))
+  wordlist = map(stripwhitespace, wordlist)
+  for w in wordlist:
+    print("\"{}\"".format(w))
+  longestword = max(wordlist,key=len)
+  maxlen = len(longestword)
   if maxlen > height and maxlen > width:
-    print("{}: wordlistfile {} contains a word that won't fit in the puzzle".format(sys.argv[0], wordlistfile))
+    print("{}: wordlistfile {} contains a word {} that won't fit in the puzzle".format(sys.argv[0], wordlistfile, longestword))
     sys.exit(3)
+
+  for w in wordlist:
+    print("\"{}\"".format(w))
 
   sys.exit(0)
     
