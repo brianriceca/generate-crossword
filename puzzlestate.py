@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/usr/bin/env python3
 
 '''
 Geometry:
@@ -63,27 +63,33 @@ class puzzlestate:
           print('* ', end='')
       print()
   def possible_word_starts(self, word, direction):
-    positionlist = []
+    # Until we know the desired direction, the word can start anywere in the puzzle.
     minx = 0
     maxx = self.width - 1
+
     miny = 0
     maxy = self.height - 1
-    if direction[0] == 0:
+
+    # Now let's refine the bounding box based on the desired direction.
+
+    if direction[0] == 0: # it's a horizontal word
       pass
-    elif direction[0] == -1:
-      pass
-    elif direction[0] == 1:
+    elif direction[0] == -1: # it goes up
+      minx = len(word) 
+    elif direction[0] == 1: # it goes down
       maxx = maxx - len(word)
     else:
-      throw ValueError("direction[0] can't be this value",direction[0])
-    if direction[1] == 0:
-      miny = 
-    elif direction[1] == -1:
-      miny = 
-    elif direction[1] == 1:
-      miny = 
+      raise ValueError("{} can't be this value".format(direction[0]))
+
+    if direction[1] == 0: # it's a vertical word
+      pass
+    elif direction[1] == -1: # it's right to left
+      miny = len(word)
+    elif direction[1] == 1: # it's left to right
+      miny = miny - len(word)
     else:
-      throw ValueError("direction[1] can't be this value",direction[1])
+      raise ValueError("{} can't be this value".format(direction[1]))
+    positionlist = []
     for i in range(minx,maxx):
       for j in range(minx,maxy):
         newloc = (i,j)

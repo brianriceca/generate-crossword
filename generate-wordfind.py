@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 '''
 generate-wordfind.py: create a hidden-word puzzle
 
@@ -15,6 +15,7 @@ Geometry:
 '''
 
 import sys
+import puzzlestate
 
 directionlist = ( 
         (1,0),          # forwards
@@ -27,11 +28,7 @@ directionlist = (
         (1,1)          # diagonal down forwards
 )
 
-def stripwhitespace(s):
-  return s.strip()
-
 def solve(puzzlestate, wordlist):
-
     if not wordlist:
       export_puzzlestate(puzzlestate)
       return True
@@ -63,22 +60,16 @@ def main():
     print("{}: couldn't open wordlistfile {}".format(sys.argv[0], wordlistfile))
     sys.exit(2)
 
-  for w in wordlist:
-    print("\"{}\"".format(w))
-  wordlist = map(stripwhitespace, wordlist)
-  for w in wordlist:
-    print("\"{}\"".format(w))
+  wordlist = [x.strip() for x in wordlist]
   longestword = max(wordlist,key=len)
   maxlen = len(longestword)
-  if maxlen > height and maxlen > width:
+  if maxlen > height or maxlen > width:
     print("{}: wordlistfile {} contains a word {} that won't fit in the puzzle".format(sys.argv[0], wordlistfile, longestword))
     sys.exit(3)
 
   for w in wordlist:
     print("\"{}\"".format(w))
 
-  sys.exit(0)
-    
   p = puzzlestate(height,width)
 
   if solve(p,wordlist):
