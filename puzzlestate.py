@@ -3,7 +3,8 @@
 import random
 import json
 
-'''
+class puzzlestate:
+  '''
 Geometry:
   
           0
@@ -12,8 +13,9 @@ Geometry:
         ...
    height-1
              0 1 2 ... width-1
+  '''
 
-directionlist = ( 
+  directionlist = ( 
         (1,0),          # forwards
         (1,-1),          # diagonal up forwards
         (0,-1),          # up
@@ -22,10 +24,8 @@ directionlist = (
         (-1,1),        # diagonal down backwards
         (0,1),         # down
         (1,1)          # diagonal down forwards
-)
-'''
+  )
 
-class puzzlestate:
   def __init__(self,height,width):
     self.height = height
     self.width = width
@@ -40,22 +40,36 @@ class puzzlestate:
   def getchar(self,x,y):
     return self.layout[y][x]
   def inscribe_word(self,word,location,direction):
+    # first, a test
     thisx,thisy = location
     xincrement,yincrement = direction
+
     for c in word:
       if thisx < 0 or thisx >= self.width or thisy < 0 or thisy >= self.height:
         return False
       if self.layout[thisy][thisx] == c:
         pass # Yay! It's already the character we want.
       elif self.layout[thisy][thisx] == None:
-        self.layout[thisy][thisx] = c
+        pass
       else:
         return False
       thisx = thisx + xincrement   
       thisy = thisy + yincrement   
+
+    # OK, now for real
+    thisx,thisy = location
+    xincrement,yincrement = direction
+
+    for c in word:
+      assert (not (thisx < 0 or thisx >= self.width or thisy < 0 or thisy >= self.height)), "out of range"
+      assert ((self.layout[thisy][thisx] == None) or (self.layout[thisy][thisx] == c)), "found a conflict"
+      self.layout[thisy][thisx] = c
+      thisx = thisx + xincrement   
+      thisy = thisy + yincrement   
+
     self.wordsused.append(word)
-    print(self.layout)
     return True     
+
   def print(self):
     for i in range(self.height):
       for j in range(self.width):
@@ -107,6 +121,7 @@ def main():
   height = 5
   width = 6
   p = puzzlestate(height,width)
+  '''
   location = [ 0, 0 ]
   direction = [ 1, 0 ]
 
@@ -124,17 +139,19 @@ def main():
   else:
     print("failure")
 
-  location = [ 5, 4 ]
-  direction = [ -1, 0 ]
-  print("about to inscribe word 3")
-  if p.inscribe_word("boot",location,direction):
+'''
+  p.print()
+  location = [ 4, 5 ]
+  direction = p.directionlist[random.randrange(8)]
+  trial_word = "boot"
+  print("about to inscribe word {} at location {}, direction {}".format(trial_word,location,direction))
+  if p.inscribe_word(trial_word,location,direction):
     print("success")
   else:
     print("failure")
-  print(p.getchar(0,0))
-  print(p.getchar(0,1))
   print(p.getchar(1,1))
 
+  print("===========")
   trial_word = "foo"
   trial_direction = [ -1, -1 ]
   word_start_list = p.possible_word_starts(trial_word, trial_direction)
@@ -153,5 +170,6 @@ def main():
   print(p.json())
 
 if __name__ == '__main__':
+    random.seed()
     main()
 
