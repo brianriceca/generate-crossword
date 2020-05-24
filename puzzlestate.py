@@ -108,19 +108,34 @@ def main():
   p = puzzlestate(height,width)
   location = [ 0, 0 ]
   direction = [ 1, 0 ]
+
+  print("about to inscribe word 1")
   if p.inscribe_word("super",location,direction):
     print("success")
   else:
     print("failure")
+
   location = [ 2, 1 ]
   direction = [ 0, -1 ]
+  print("about to inscribe word 2")
   if p.inscribe_word("up",location,direction):
+    print("success")
+  else:
+    print("failure")
+
+  location = [ 5, 4 ]
+  direction = [ -1, 0 ]
+  print("about to inscribe word 3")
+  if p.inscribe_word("boot",location,direction):
     print("success")
   else:
     print("failure")
   print(p.getchar(0,0))
   print(p.getchar(0,1))
   print(p.getchar(1,1))
+
+  print(x for x in p.possible_word_starts("foo", [-1, 0]))
+
   p.print()
 
 if __name__ == '__main__':
