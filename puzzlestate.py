@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import random
+import json
 
 '''
 Geometry:
@@ -29,7 +30,7 @@ class puzzlestate:
     self.height = height
     self.width = width
     self.layout = [[None for i in range(width)] for j in range(height)]
-    self.wordsused = []
+    self.wordsused = list()
   def getheight(self):
     return self.height
   def getwidth(self):
@@ -64,6 +65,8 @@ class puzzlestate:
         else:
           print('* ', end='')
       print()
+  def json(self):
+    return json.dumps(self.layout)
   def possible_word_starts(self, word, direction):
     # Until we know the desired direction, the word can start anywere in the puzzle.
     minx = 0
@@ -91,7 +94,7 @@ class puzzlestate:
       miny = miny - len(word)
     else:
       raise ValueError("{} can't be this value".format(direction[1]))
-    positionlist = []
+    positionlist = list()
     for i in range(minx,maxx):
       for j in range(miny,maxy):
         newloc = (i,j)
@@ -147,6 +150,7 @@ def main():
     print("failure")
 
   p.print()
+  print(p.json())
 
 if __name__ == '__main__':
     main()
