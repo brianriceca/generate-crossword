@@ -132,7 +132,19 @@ def main():
   print(p.getchar(0,1))
   print(p.getchar(1,1))
 
-  print(p.possible_word_starts("foo", [-1, 0]))
+  trial_word = "foo"
+  trial_direction = [ -1, -1 ]
+  word_start_list = p.possible_word_starts(trial_word, trial_direction)
+
+  for loc in word_start_list:
+    last_status = p.inscribe_word(trial_word,loc,trial_direction)
+    if last_status:
+      break
+
+  if last_status:
+    print("success")
+  else:
+    print("failure")
 
   p.print()
 
