@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import random
+
 '''
 Geometry:
   
@@ -91,15 +93,11 @@ class puzzlestate:
       raise ValueError("{} can't be this value".format(direction[1]))
     positionlist = []
     for i in range(minx,maxx):
-      for j in range(minx,maxy):
+      for j in range(miny,maxy):
         newloc = (i,j)
         positionlist.append(newloc)
     random.shuffle(positionlist)
-    while 1:
-        try:
-            yield positionlist.pop()
-        except IndexError:
-            yield [ -1, -1, (0, 0) ]
+    return positionlist
 
 
 def main():
@@ -134,7 +132,7 @@ def main():
   print(p.getchar(0,1))
   print(p.getchar(1,1))
 
-  print(x for x in p.possible_word_starts("foo", [-1, 0]))
+  print(p.possible_word_starts("foo", [-1, 0]))
 
   p.print()
 
