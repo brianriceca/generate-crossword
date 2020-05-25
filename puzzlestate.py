@@ -2,6 +2,7 @@
 
 import random
 import json
+import copy
 
 class puzzlestate:
   '''
@@ -26,9 +27,9 @@ Geometry:
         (1,1)          # diagonal down forwards
   )
 
-  def __init__(self,height,width):
-    self.height = height
+  def __init__(self,width,height):
     self.width = width
+    self.height = height
     self.layout = [[None for i in range(width)] for j in range(height)]
     self.wordsused = list()
   def getheight(self):
@@ -39,36 +40,53 @@ Geometry:
     return self.wordsused
   def getchar(self,x,y):
     return self.layout[y][x]
+  def setchar(self,x,y,c):
+    x = int(x)
+    y = int(y)
+    if x < 0:
+      return None
+    if y < 0:
+      return None
+    if x >= self.width:
+      return None
+    if y >= self.height:
+      return None
+    self.layout[y][x] = c
+    return self
+
   def inscribe_word(self,word,location,direction):
+    # returns a new puzzle state object containing the word if it was able to inscribe it, else None
+
     # first, a test
     thisx,thisy = location
     xincrement,yincrement = direction
 
     for c in word:
       if thisx < 0 or thisx >= self.width or thisy < 0 or thisy >= self.height:
-        return False
+        return None
       if self.layout[thisy][thisx] == c:
         pass # Yay! It's already the character we want.
       elif self.layout[thisy][thisx] == None:
         pass
       else:
-        return False
+        return None
       thisx = thisx + xincrement   
       thisy = thisy + yincrement   
 
     # OK, now for real
+    newpuzzlestate = copy.deepcopy(self)
     thisx,thisy = location
     xincrement,yincrement = direction
 
     for c in word:
-      assert (not (thisx < 0 or thisx >= self.width or thisy < 0 or thisy >= self.height)), "out of range"
-      assert ((self.layout[thisy][thisx] == None) or (self.layout[thisy][thisx] == c)), "found a conflict"
-      self.layout[thisy][thisx] = c
+      assert (not (thisx < 0 or thisx >= newpuzzlestate.width or thisy < 0 or thisy >= newpuzzlestate.height)), "out of range"
+      assert ((newpuzzlestate.layout[thisy][thisx] == None) or (newpuzzlestate.layout[thisy][thisx] == c)), "found a conflict"
+      newpuzzlestate.layout[thisy][thisx] = c
       thisx = thisx + xincrement   
       thisy = thisy + yincrement   
 
-    self.wordsused.append(word)
-    return True     
+    newpuzzlestate.wordsused.append(word)
+    return newpuzzlestate
 
   def print(self):
     for i in range(self.height):
@@ -120,54 +138,59 @@ Geometry:
 def main():
   height = 5
   width = 6
-  p = puzzlestate(height,width)
-  '''
+  p = puzzlestate(width,height)
   location = [ 0, 0 ]
   direction = [ 1, 0 ]
 
   print("about to inscribe word 1")
-  if p.inscribe_word("super",location,direction):
-    print("success")
-  else:
+  p1 = p.inscribe_word("super",location,direction)
+  if p1 is None:
     print("failure")
+  else:
+    print("success")
 
   location = [ 2, 1 ]
   direction = [ 0, -1 ]
   print("about to inscribe word 2")
-  if p.inscribe_word("up",location,direction):
-    print("success")
-  else:
+  p2 = p1.inscribe_word("up",location,direction)
+  if p2 is None:
     print("failure")
+    p2 = p
+  else:
+    print("success")
 
-'''
-  p.print()
-  location = [ 4, 5 ]
+  p2.print()
+
+  location = [ 5, 4 ]
   direction = p.directionlist[random.randrange(8)]
   trial_word = "boot"
   print("about to inscribe word {} at location {}, direction {}".format(trial_word,location,direction))
-  if p.inscribe_word(trial_word,location,direction):
-    print("success")
-  else:
+  p3 = p2.inscribe_word(trial_word,location,direction)
+  if p3 is None:
     print("failure")
+    p3 = p2
+  else:
+    print("success")
   print(p.getchar(1,1))
 
   print("===========")
   trial_word = "foo"
   trial_direction = [ -1, -1 ]
-  word_start_list = p.possible_word_starts(trial_word, trial_direction)
+  word_start_list = p3.possible_word_starts(trial_word, trial_direction)
 
   for loc in word_start_list:
-    last_status = p.inscribe_word(trial_word,loc,trial_direction)
-    if last_status:
+    p4 = p3.inscribe_word(trial_word,loc,trial_direction)
+    last_status = p3.inscribe_word(trial_word,loc,trial_direction)
+    if p4 is not None:
       break
 
-  if last_status:
-    print("success")
-  else:
+  if p4 is None:
     print("failure")
+  else:
+    print("success")
 
-  p.print()
-  print(p.json())
+  p4.print()
+  print(p4.json())
 
 if __name__ == '__main__':
     random.seed()
