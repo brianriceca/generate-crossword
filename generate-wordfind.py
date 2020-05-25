@@ -15,29 +15,28 @@ Geometry:
 '''
 
 import sys
+import copy
+
 import puzzlestate
 
-directionlist = ( 
-        (1,0),          # forwards
-        (1,-1),          # diagonal up forwards
-        (0,-1),          # up
-        (-1,-1),         # diagonal up backwards
-        (-1,0),         # backwards
-        (-1,1),        # diagonal down backwards
-        (0,1),         # down
-        (1,1)          # diagonal down forwards
-)
-
 def solve(puzzlestate, wordlist):
-    if not wordlist:
-      export_puzzlestate(puzzlestate)
-      return True
+  if not wordlist:
+    # Hey! That means we solved the puzzle.
+    export_puzzlestate(puzzlestate)
+    return True
+
     for i, tryword in enumerate(wordlist):
       rest_of_wordlist = [wordlist[x] for x in range(len(wordlist)) if x != i ]
-      for trydirection in directionlist:
-        for trylocation in possible_word_starts(puzzlestate,tryword,trydirection):
-         puzzlestate2 = copy(puzzlestate)
-         if inscribe_word(puzzlestate2,tryword,trylocation):
+      for trydirection in puzzlestate.directionlist:
+        for trylocation in puzzlestate.possible_word_starts(tryword,trydirection):
+          puzzlestate2 = puzzlestate.inscribe_word(tryword,trylocation):
+          if puzzlestate2 is None:       
+            # oh well, that means we were not able to inscribe this word at this location in this direction.
+            # try the next one!
+            continue
+          else:
+            # cool! let's recurse.
+            solve(puzzlestate2,rest_of_wordlist)             
            if solve(puzzlestate2,rest_of_wordlist):
               return True
     return False
@@ -51,8 +50,8 @@ def main():
   width = int(sys.argv[2])
   wordlistfile = sys.argv[3]  
 
-  wordlist = []
-  
+  wordlist = list()
+ 
   try:
     with open(wordlistfile,'rb') as f:
       wordlist = f.readlines()
@@ -63,6 +62,7 @@ def main():
   wordlist = [x.strip() for x in wordlist]
   longestword = max(wordlist,key=len)
   maxlen = len(longestword)
+
   if maxlen > height or maxlen > width:
     print("{}: wordlistfile {} contains a word {} that won't fit in the puzzle".format(sys.argv[0], wordlistfile, longestword))
     sys.exit(3)
