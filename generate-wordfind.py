@@ -19,27 +19,29 @@ import copy
 
 import puzzlestate
 
-def solve(puzzlestate, wordlist):
+def pack_with_words(p, wordlist):
   if not wordlist:
-    # Hey! That means we solved the puzzle.
-    export_puzzlestate(puzzlestate)
-    return True
+    # Hey! That means we packed all the possible words into the puzzle.
+    p.export_puzzlestate()
+    return p
 
     for i, tryword in enumerate(wordlist):
       rest_of_wordlist = [wordlist[x] for x in range(len(wordlist)) if x != i ]
-      for trydirection in puzzlestate.directionlist:
-        for trylocation in puzzlestate.possible_word_starts(tryword,trydirection):
-          puzzlestate2 = puzzlestate.inscribe_word(tryword,trylocation):
-          if puzzlestate2 is None:       
+      for trydirection in p.directionlist:
+        for trylocation in p.possible_word_starts(tryword,trydirection):
+          p2 = p.inscribe_word(tryword,trylocation)
+          if p2 is None:
             # oh well, that means we were not able to inscribe this word at this location in this direction.
             # try the next one!
             continue
           else:
             # cool! let's recurse.
-            solve(puzzlestate2,rest_of_wordlist)             
-           if solve(puzzlestate2,rest_of_wordlist):
-              return True
-    return False
+            if pack_with_words(p2,rest_of_wordlist):
+              return p2
+
+    # if we make it here, that means that none of the words in wordlist can be inscribed.
+    print("none of the words in wordlist {} can be inscribed.".format(wordlist))
+    return None
 
 def main():
   if len(sys.argv) != 4 or int(sys.argv[1]) < 1 or int(sys.argv[2]) < 1:
@@ -63,16 +65,16 @@ def main():
   longestword = max(wordlist,key=len)
   maxlen = len(longestword)
 
-  if maxlen > height or maxlen > width:
+  if maxlen > height and maxlen > width:
     print("{}: wordlistfile {} contains a word {} that won't fit in the puzzle".format(sys.argv[0], wordlistfile, longestword))
     sys.exit(3)
 
   for w in wordlist:
     print("\"{}\"".format(w))
 
-  p = puzzlestate(height,width)
+  p = Puzzlestate(height,width)
 
-  if solve(p,wordlist):
+  if pack_with_words(p,wordlist):
     print("success")
   else:
     print("failure")

@@ -4,7 +4,7 @@ import random
 import json
 import copy
 
-class puzzlestate:
+class Puzzlestate:
   '''
 Geometry:
   
@@ -40,6 +40,10 @@ Geometry:
     return self.wordsused
   def getchar(self,x,y):
     return self.layout[y][x]
+  def copy(self):
+    newp = Puzzlestate(self.width,self.height)
+    newp.layout = copy.deepcopy(self.layout)
+    return newp
   def setchar(self,x,y,c):
     x = int(x)
     y = int(y)
@@ -74,7 +78,7 @@ Geometry:
       thisy = thisy + yincrement   
 
     # OK, now for real
-    newpuzzlestate = copy.deepcopy(self)
+    newpuzzlestate = self.copy()
     thisx,thisy = location
     xincrement,yincrement = direction
 
@@ -138,7 +142,7 @@ Geometry:
 def main():
   height = 5
   width = 6
-  p = puzzlestate(width,height)
+  p = Puzzlestate(width,height)
   location = [ 0, 0 ]
   direction = [ 1, 0 ]
 
