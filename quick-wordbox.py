@@ -59,11 +59,11 @@ def fill_in(p,locationlist):
       print("this shouldn't happen. word={}".format(word))
       p.print()
       sys.exit(4)
-    if fill_in(newp,restoflist): 
-      print("filled in all the blanks!")
-      p.print()
-      sys.exit(0)
-
+    result_p = fill_in(newp,restoflist): 
+    if result_p is None:
+      pass # OK, try the next word here instead
+    else:
+      return result_p
 
 
   
