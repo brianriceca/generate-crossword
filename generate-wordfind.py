@@ -17,7 +17,7 @@ Geometry:
 import sys
 import copy
 
-import puzzlestate
+from puzzlestate import Puzzlestate
 
 def pack_with_words(p, wordlist):
   if not wordlist:
@@ -56,12 +56,12 @@ def main():
  
   try:
     with open(wordlistfile,'rb') as f:
-      wordlist = f.readlines()
+      wordlist2 = f.readlines()
   except IOError:
     print("{}: couldn't open wordlistfile {}".format(sys.argv[0], wordlistfile))
     sys.exit(2)
 
-  wordlist = [x.strip() for x in wordlist]
+  wordlist = [str(x.decode('utf-8').strip()) for x in wordlist2]
   longestword = max(wordlist,key=len)
   maxlen = len(longestword)
 
@@ -69,16 +69,10 @@ def main():
     print("{}: wordlistfile {} contains a word {} that won't fit in the puzzle".format(sys.argv[0], wordlistfile, longestword))
     sys.exit(3)
 
-  for w in wordlist:
-    print("\"{}\"".format(w))
-
   p = Puzzlestate(height,width)
 
-  if pack_with_words(p,wordlist):
-    print("success")
-  else:
-    print("failure")
-
+  pack_with_words(p,wordlist)
+  p.print()
 
 if __name__ == "__main__":
     main()
