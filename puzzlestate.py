@@ -16,47 +16,72 @@ Geometry:
              0 1 2 ... width-1
   '''
 
-  directionlist = ( 
-        (1,0),          # forwards
-        (1,-1),          # diagonal up forwards
-        (0,-1),          # up
-        (-1,-1),         # diagonal up backwards
-        (-1,0),         # backwards
-        (-1,1),        # diagonal down backwards
-        (0,1),         # down
-        (1,1)          # diagonal down forwards
-  )
+  directionmap = {
+    'E': (1,0),
+    'a': (1,0),
+    'NE': (1,-1),
+    'uf': (1,-1),
+    'N': (0,-1),
+    'u': (0,-1),
+    'NW': (-1,-1),
+    'ub': (-1,-1),
+    'W': (-1,0),
+    'b': (-1,0),
+    'SW': (-1,1),
+    'db': (-1,1),
+    'S': (0,1),
+    'd': (0,1),
+    'SE': (1,1),
+    'df': (1,1)
+  }
 
-  def __init__(self,width,height):
-    self.width = width
-    self.height = height
-    self.layout = [[None for i in range(width)] for j in range(height)]
-    self.wordsused = list()
-  def getheight(self):
-    return self.height
-  def getwidth(self):
-    return self.width
+  def __init__(self,data):
+    self.data = data
+
+  @classmethod
+  def blank(cls,height,width):
+    if int(width) <= 0 or int(height) <= 0:
+      return None
+    return cls({"dimensions": {"height": int(height), "width": int(width)}})
+
+
+  @classmethod
+  def fromjsonfile(cls,filename):
+
+      try:
+        with open(filename) as f:
+          data = json.load(f)
+      except OSError:
+        return False
+
+      return cls(data)
+
+
+
   def getwordsused(self):
     return self.wordsused
   def getchar(self,x,y):
     return self.layout[y][x]
+
+
   def copy(self):
     newp = Puzzlestate(self.width,self.height)
     newp.layout = copy.deepcopy(self.layout)
     return newp
-  def setchar(self,x,y,c):
-    x = int(x)
-    y = int(y)
+  def setchar(self,rowno,colno,c):
+    rowno = int(rowno)
+    colno = int(colno)
     if x < 0:
       return None
-    if y < 0:
+    if colno < 0:
       return None
     if x >= self.width:
       return None
-    if y >= self.height:
+    if colno >= self.height:
       return None
-    self.layout[y][x] = c
+    self.layout[colno][x] = c
     return self
+
 
   def inscribe_word(self,word,location,direction):
     # returns a new puzzle state object containing the word if it was able to inscribe it, else None
