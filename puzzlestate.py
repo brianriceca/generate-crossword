@@ -38,6 +38,9 @@ Directions are defined as (rowincrement,colincrement)
     'df': (1,1)
   }
 
+  def _createblanksolution(height,width):
+    return [[None for i in range(width)] for j in range(height)]
+
   def __init__(self,data):
     self.data = data
 
@@ -45,7 +48,10 @@ Directions are defined as (rowincrement,colincrement)
   def blank(cls,height,width):
     if int(width) <= 0 or int(height) <= 0:
       return None
-    return cls({"dimensions": {"height": int(height), "width": int(width)}})
+    return cls( {"dimensions": {"height": int(height), 
+                                "width": int(width)},
+                 "solution": _createblanksolution(height,width) })
+
 
   @classmethod
   def fromjsonfile(cls,filename):
@@ -120,17 +126,17 @@ Directions are defined as (rowincrement,colincrement)
     xincrement,yincrement = direction
 
     for c in word:
-      assert (thisx >= 0, "thisx value " . str(thisx) . " before the range")
-      assert (thisy >= 0, "thisy value " . str(thisy) . " before the range")
-      assert (thisx < newpuzzlestate.height(), 
-              "thisx value " . str(thisx) . " after the range")
-      assert (thisy < newpuzzlestate.width(), 
-              "thisy value " . str(thisy) . " after the range")
-      assert (newpuzzlestate.getchar(thisx,thisy) == None
-             or newpuzzlestate.getchar(thisx,thisy) == '?'
-             or newpuzzlestate.getchar(thisx,thisy) == '*'
-             or newpuzzlestate.getchar(thisx,thisy) == '.' 
-             or newpuzzlestate.getchar(thisx,thisy) == c , "found a conflict")
+      assert thisx >= 0, "thisx value " + str(thisx) + " before the range"
+      assert thisy >= 0, "thisy value " + str(thisy) + " before the range"
+      assert thisx < newpuzzlestate.height(), \
+              "thisx value " + str(thisx) + " after the range"
+      assert thisy < newpuzzlestate.width(), \
+              "thisy value " + str(thisy) + " after the range"
+      assert newpuzzlestate.getchar(thisx,thisy) == None   \
+             or newpuzzlestate.getchar(thisx,thisy) == '?' \
+             or newpuzzlestate.getchar(thisx,thisy) == '*' \
+             or newpuzzlestate.getchar(thisx,thisy) == '.' \
+             or newpuzzlestate.getchar(thisx,thisy) == c , "found a conflict"
 
       newpuzzlestate.setchar(thisx,thisy,c)
       thisx = thisx + xincrement   
@@ -139,8 +145,8 @@ Directions are defined as (rowincrement,colincrement)
     return newpuzzlestate
 
   def print(self):
-    for rowno in range(self.height():
-      for colno in range(self.data["dimensions"]["width"]:
+    for rowno in range(self.height()):
+      for colno in range(self.width()):
         c = self.getchar(rowno,colno)
         if c:
           print("{0:s} ".format(c), end='')
