@@ -14,23 +14,26 @@ Geometry:
         ...
    height-1
              0 1 2 ... width-1
+
+Directions are defined as (rowincrement,colincrement)
+
   '''
 
   directionmap = {
-    'E': (1,0),
-    'a': (1,0),
-    'NE': (1,-1),
-    'uf': (1,-1),
-    'N': (0,-1),
-    'u': (0,-1),
+    'E': (0,1),
+    'a': (0,1),
+    'NE': (-1,1),
+    'uf': (-1,1),
+    'N': (-1,0),
+    'u': (-1,0),
     'NW': (-1,-1),
     'ub': (-1,-1),
-    'W': (-1,0),
-    'b': (-1,0),
-    'SW': (-1,1),
-    'db': (-1,1),
-    'S': (0,1),
-    'd': (0,1),
+    'W': (0,-1),
+    'b': (0,-1),
+    'SW': (1,-1),
+    'db': (1,-1),
+    'S': (1,0),
+    'd': (1,0),
     'SE': (1,1),
     'df': (1,1)
   }
@@ -44,44 +47,49 @@ Geometry:
       return None
     return cls({"dimensions": {"height": int(height), "width": int(width)}})
 
-
   @classmethod
   def fromjsonfile(cls,filename):
-
       try:
         with open(filename) as f:
           data = json.load(f)
       except OSError:
         return False
-
       return cls(data)
 
+  def height(self):
+    return self.data["dimensions"]["height"]
 
+  def width(self):
+    return self.data["dimensions"]["width"]
 
-  def getwordsused(self):
-    return self.wordsused
-  def getchar(self,x,y):
-    return self.layout[y][x]
+  def getchar(self,rowno,colno):
+    return self.data["solution"][rowno][colno]
 
-
-  def copy(self):
-    newp = Puzzlestate(self.width,self.height)
-    newp.layout = copy.deepcopy(self.layout)
-    return newp
   def setchar(self,rowno,colno,c):
     rowno = int(rowno)
     colno = int(colno)
-    if x < 0:
+    if rowno < 0:
       return None
     if colno < 0:
       return None
-    if x >= self.width:
+    if colno >= self.width():
       return None
-    if colno >= self.height:
+    if rowno >= self.height():
       return None
-    self.layout[colno][x] = c
+    self.data["solution"][rowno][colno] = c
     return self
 
+  def getwordsused(self):
+    return self.data["wordsused"]
+
+  def addwordused(self,word):
+    self.data["wordsused"].append(word)
+    return self
+
+  def copy(self):
+    newp = Puzzlestate(self.height(),self.width())
+    newp.data = copy.deepcopy(self.data)
+    return newp
 
   def inscribe_word(self,word,location,direction):
     # returns a new puzzle state object containing the word if it was able to inscribe it, else None
@@ -91,36 +99,49 @@ Geometry:
     xincrement,yincrement = direction
 
     for c in word:
-      if thisx < 0 or thisx >= self.width or thisy < 0 or thisy >= self.height:
+      if ( thisx < 0 or thisx >= self.data["dimensions"]["width"]
+           or thisy < 0 or thisy >= self.height() ):
         return None
-      if self.layout[thisy][thisx] == c:
+      if self.getchar(thisx,thisy) == c:
         pass # Yay! It's already the character we want.
-      elif self.layout[thisy][thisx] == None:
-        pass
+      elif ( self.getchar(thisx,thisy) == None
+             or self.getchar(thisx,thisy) == '?'
+             or self.getchar(thisx,thisy) == '*'
+             or self.getchar(thisx,thisy) == '.' ):
+        pass # Yay!  It's not been filled in yet
       else:
-        return None
+        return None # D'oh! The space is already in use with a different letter
       thisx = thisx + xincrement   
       thisy = thisy + yincrement   
 
-    # OK, now for real
+    # Now that we know it works, let's write in the word for real
     newpuzzlestate = self.copy()
     thisx,thisy = location
     xincrement,yincrement = direction
 
     for c in word:
-      assert (not (thisx < 0 or thisx >= newpuzzlestate.width or thisy < 0 or thisy >= newpuzzlestate.height)), "out of range"
-      assert ((newpuzzlestate.layout[thisy][thisx] == None) or (newpuzzlestate.layout[thisy][thisx] == c)), "found a conflict"
-      newpuzzlestate.layout[thisy][thisx] = c
+      assert (thisx >= 0, "thisx value " . str(thisx) . " before the range")
+      assert (thisy >= 0, "thisy value " . str(thisy) . " before the range")
+      assert (thisx < newpuzzlestate.height(), 
+              "thisx value " . str(thisx) . " after the range")
+      assert (thisy < newpuzzlestate.width(), 
+              "thisy value " . str(thisy) . " after the range")
+      assert (newpuzzlestate.getchar(thisx,thisy) == None
+             or newpuzzlestate.getchar(thisx,thisy) == '?'
+             or newpuzzlestate.getchar(thisx,thisy) == '*'
+             or newpuzzlestate.getchar(thisx,thisy) == '.' 
+             or newpuzzlestate.getchar(thisx,thisy) == c , "found a conflict")
+
+      newpuzzlestate.setchar(thisx,thisy,c)
       thisx = thisx + xincrement   
       thisy = thisy + yincrement   
-
-    newpuzzlestate.wordsused.append(word)
+    newpuzzlestate.addwordused(word)
     return newpuzzlestate
 
   def print(self):
-    for i in range(self.height):
-      for j in range(self.width):
-        c = self.layout[i][j]
+    for rowno in range(self.height():
+      for colno in range(self.data["dimensions"]["width"]:
+        c = self.getchar(rowno,colno)
         if c:
           print("{0:s} ".format(c), end='')
         else:
@@ -134,7 +155,7 @@ Geometry:
     maxx = self.width - 1
 
     miny = 0
-    maxy = self.height - 1
+    maxy = self.height() - 1
 
     # Now let's refine the bounding box based on the desired direction.
 
