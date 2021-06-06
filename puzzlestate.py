@@ -38,9 +38,6 @@ Directions are defined as (rowincrement,colincrement)
     'df': (1,1)
   }
 
-  def _createblanksolution(height,width):
-    return [[None for i in range(width)] for j in range(height)]
-
   def __init__(self,data):
     self.data = data
 
@@ -50,20 +47,25 @@ Directions are defined as (rowincrement,colincrement)
       return None
     return cls( {"dimensions": {"height": int(height), 
                                 "width": int(width)},
-                 "solution": _createblanksolution(height,width) })
+                 "solution": [[None for i in range(width)] for j in range(height)] })
 
 
   @classmethod
   def fromjsonfile(cls,filename):
-      try:
-        with open(filename) as f:
-          data = json.load(f)
-      except OSError:
-        return False
-      return cls(data)
+    try:
+      with open(filename) as f:
+        data = json.load(f)
+    except OSError:
+      return False
+    return cls(data)
 
-  def height(self):
-    return self.data["dimensions"]["height"]
+  def writejson(self,filename):
+    try:
+      with open(filename, 'w') as f:
+        json.dump(self.data, f, indent=2, sort_keys=True)
+    except OSError:
+      return False
+    return self
 
   def width(self):
     return self.data["dimensions"]["width"]
