@@ -19,7 +19,7 @@ Directions are defined as (rowincrement,colincrement)
 
   '''
 
-  directionmap = {
+  direction = {
     'E': (0,1),
     'a': (0,1),
     'NE': (-1,1),
@@ -47,7 +47,9 @@ Directions are defined as (rowincrement,colincrement)
       return None
     return cls( {"dimensions": {"height": int(height), 
                                 "width": int(width)},
-                 "solution": [[None for i in range(width)] for j in range(height)] })
+                 "wordsused": [],
+                 "solution": 
+                  [[None for i in range(width)] for j in range(height)] })
 
 
   @classmethod
@@ -67,6 +69,9 @@ Directions are defined as (rowincrement,colincrement)
       return False
     return self
 
+  def height(self):
+    return self.data["dimensions"]["height"]
+
   def width(self):
     return self.data["dimensions"]["width"]
 
@@ -77,25 +82,49 @@ Directions are defined as (rowincrement,colincrement)
     rowno = int(rowno)
     colno = int(colno)
     if rowno < 0:
-      return None
+      raise IndexError("row number " + str(rowno) + " too small")
     if colno < 0:
-      return None
-    if colno >= self.width():
-      return None
+      raise IndexError("col number " + str(colno) + " too small")
     if rowno >= self.height():
-      return None
-    self.data["solution"][rowno][colno] = c
+      raise IndexError("row number " + str(rowno) + " too big")
+    if colno >= self.width():
+      raise IndexError("col number " + str(colno) + " too big")
+    self.data["solution"][rowno][colno] = c.upper()
     return self
 
+  def testchar(self,rowno,colno,c):
+    rowno = int(rowno)
+    colno = int(colno)
+    if rowno < 0:
+      raise IndexError("row number " + str(rowno) + " too small")
+    if colno < 0:
+      raise IndexError("col number " + str(colno) + " too small")
+    if rowno >= self.height():
+      raise IndexError("row number " + str(rowno) + " too big")
+    if colno >= self.width():
+      raise IndexError("col number " + str(colno) + " too big")
+    if self.getchar(rowno,colno) is None:
+      return True # Yay!  It's not been filled in yet
+    if self.getchar(rowno,colno).upper() == c.upper():
+      return True # Yay! It's already the character we want.
+    elif ( self.getchar(rowno,colno) == '?'
+             or self.getchar(rowno,colno) == '*'
+             or self.getchar(rowno,colno) == '.' ):
+      return True # Yay!  It's not been filled in yet
+    return False # D'oh! The space is already in use with a different letter
+
   def getwordsused(self):
-    return self.data["wordsused"]
+    try:
+      return self.data["wordsused"]
+    except KeyError:
+      return None
 
   def addwordused(self,word):
     self.data["wordsused"].append(word)
     return self
 
   def copy(self):
-    newp = Puzzlestate(self.height(),self.width())
+    newp = Puzzlestate.blank(self.height(),self.width())
     newp.data = copy.deepcopy(self.data)
     return newp
 
@@ -107,18 +136,13 @@ Directions are defined as (rowincrement,colincrement)
     xincrement,yincrement = direction
 
     for c in word:
-      if ( thisx < 0 or thisx >= self.data["dimensions"]["width"]
+      if ( thisx < 0 or thisx >= self.width()
            or thisy < 0 or thisy >= self.height() ):
         return None
-      if self.getchar(thisx,thisy) == c:
-        pass # Yay! It's already the character we want.
-      elif ( self.getchar(thisx,thisy) == None
-             or self.getchar(thisx,thisy) == '?'
-             or self.getchar(thisx,thisy) == '*'
-             or self.getchar(thisx,thisy) == '.' ):
-        pass # Yay!  It's not been filled in yet
+      if self.testchar(thisx,thisy,c):
+        pass 
       else:
-        return None # D'oh! The space is already in use with a different letter
+        return None 
       thisx = thisx + xincrement   
       thisy = thisy + yincrement   
 
@@ -138,7 +162,7 @@ Directions are defined as (rowincrement,colincrement)
              or newpuzzlestate.getchar(thisx,thisy) == '?' \
              or newpuzzlestate.getchar(thisx,thisy) == '*' \
              or newpuzzlestate.getchar(thisx,thisy) == '.' \
-             or newpuzzlestate.getchar(thisx,thisy) == c , "found a conflict"
+             or newpuzzlestate.getchar(thisx,thisy).upper() == c.upper() , "found a conflict"
 
       newpuzzlestate.setchar(thisx,thisy,c)
       thisx = thisx + xincrement   
