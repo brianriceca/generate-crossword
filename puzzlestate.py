@@ -220,7 +220,7 @@ Directions are defined as (rowincrement,colincrement)
 def main():
   height = 5
   width = 6
-  p = Puzzlestate(width,height)
+  p = Puzzlestate.blank(width,height)
   location = [ 0, 0 ]
   direction = [ 1, 0 ]
 
