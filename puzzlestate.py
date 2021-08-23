@@ -229,7 +229,7 @@ def main():
   if p1 is None:
     print("failure")
   else:
-    print("success")
+    print("success!")
 
   location = [ 2, 1 ]
   direction = [ 0, -1 ]
