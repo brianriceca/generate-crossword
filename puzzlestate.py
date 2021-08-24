@@ -244,7 +244,10 @@ def main():
   p2.print()
 
   location = [ 5, 4 ]
-  direction = p.directionlist[random.randrange(8)]
+  
+  randstate =  random.randrange(len(Puzzlestate.direction))
+  print("randstate is {}".format(randstate))
+  direction = Puzzlestate.direction[randstate]
   trial_word = "boot"
   print("about to inscribe word {} at location {}, direction {}".format(trial_word,location,direction))
   p3 = p2.inscribe_word(trial_word,location,direction)
