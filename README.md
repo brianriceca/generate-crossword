@@ -1,6 +1,6 @@
-# generate-wordfind
+# generate-crossword
 
-Generate wordfind puzzles by recursively attempting to insert words in random locations in random directions.
+Generate wordfind puzzles by recursively attempting to insert words in random locations.
 
 ## Installation
 
