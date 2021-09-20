@@ -21,13 +21,12 @@ class Randomword:
       random.seed(int(time.time()))
     else:
       random.seed(seed)
+      words_of_length_n = [set() for _ in range(5)]
       for fname in os.listdir(WORDLISTDIR):
         with open(os.path.join(WORDLISTDIR), fname), 'r') as f:
-          lines = f.readlines()
-          for line in Lines:
-          count += 1
-    print("Line{}: {}".format(count, line.strip()))
-    
+          line = f.readline().strip()
+          words_of_length_n[len(line)].add(line)
+        os.close(f)
     return(cls,data)
 
   def randomword(self,length,ababness=1.0):
