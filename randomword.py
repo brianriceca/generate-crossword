@@ -12,280 +12,32 @@ class Randomword:
 
   WORDLISTDIR="/Users/brice/generate-crossword/wordstotry/"
 
-  def __init__(self,data):
-    self.data = data
-
-  @classmethod
-  def init(seed):
+  def __init__(self,seed=0):
     if seed == 0:
       random.seed(int(time.time()))
     else:
       random.seed(seed)
-      words_of_length_n = [set() for _ in range(5)]
-      for fname in os.listdir(WORDLISTDIR):
-        with open(os.path.join(WORDLISTDIR), fname), 'r') as f:
+    self.words_of_length_n = [list() for _ in range(20)]
+
+    for fname in os.listdir(Randomword.WORDLISTDIR):
+      with open(os.path.join(Randomword.WORDLISTDIR, fname), 'r') as f:
+        while True:
           line = f.readline().strip()
-          words_of_length_n[len(line)].add(line)
-        os.close(f)
-    return(cls,data)
-
-  def randomword(self,length,ababness=1.0):
-    
-
-    if int(width) <= 0 or int(height) <= 0:
-      return None
-    return cls( {"dimensions": {"height": int(height), 
-                                "width": int(width)},
-                 "wordsused": [],
-                 "solution": 
-                  [[None for i in range(width)] for j in range(height)] })
+          if not line:
+            break
+          self.words_of_length_n[len(line)].append(line)
+      f.close()
 
 
-  @classmethod
-  def fromjsonfile(cls,filename):
-    try:
-      with open(filename) as f:
-        data = json.load(f)
-    except OSError:
-      print('missing height')
-      sys.exit(1)
-    if 'height' not in data:
-      print('missing height')
-      sys.exit(2)
-    data['height'] = int(data['height'])
-    if 'width' not in data:
-      print('missing width')
-      sys.exit(3)
-    data['width'] = int(data['width'])
-    if 'puzzle' not in data:
-      print('no puzzle defined in this file')
-      sys.exit(4)
-    if len(puzzle) != data['height'] :
-      print('puzzle has {} rows but height is {}'.format(len(puzzle),data['height']))
-      sys.exit(5)
-    if [ x for x in puzzle if len(x) != data['width'] ]:
-      print('puzzle has width {} but at least one row is wrong'.format(data['width']))
-      sys.exit(6)
-    data['blank'] = 0
-    return cls(data)
-
-  def writejson(self,filename):
-    try:
-      with open(filename, 'w') as f:
-        json.dump(self.data, f, indent=2, sort_keys=True)
-    except OSError:
-      return False
-    return self
-
-  def height(self):
-    return self.data["dimensions"]["height"]
-
-  def width(self):
-    return self.data["dimensions"]["width"]
-
-  def getchar(self,rowno,colno):
-    return self.data["solution"][rowno][colno]
-
-  def setchar(self,rowno,colno,c):
-    rowno = int(rowno)
-    colno = int(colno)
-    if rowno < 0:
-      raise IndexError("row number " + str(rowno) + " too small")
-    if colno < 0:
-      raise IndexError("col number " + str(colno) + " too small")
-    if rowno >= self.height():
-      raise IndexError("row number " + str(rowno) + " too big")
-    if colno >= self.width():
-      raise IndexError("col number " + str(colno) + " too big")
-    self.data["solution"][rowno][colno] = c.upper()
-    return self
-
-  def testchar(self,rowno,colno,c):
-    rowno = int(rowno)
-    colno = int(colno)
-    if rowno < 0:
-      raise IndexError("row number " + str(rowno) + " too small")
-    if colno < 0:
-      raise IndexError("col number " + str(colno) + " too small")
-    if rowno >= self.height():
-      raise IndexError("row number " + str(rowno) + " too big")
-    if colno >= self.width():
-      raise IndexError("col number " + str(colno) + " too big")
-    if self.getchar(rowno,colno) is None:
-      return True # Yay!  It's not been filled in yet
-    if self.getchar(rowno,colno).upper() == c.upper():
-      return True # Yay! It's already the character we want.
-    elif ( self.getchar(rowno,colno) == '?'
-             or self.getchar(rowno,colno) == '*'
-             or self.getchar(rowno,colno) == '.' ):
-      return True # Yay!  It's not been filled in yet
-    return False # D'oh! The space is already in use with a different letter
-
-  def getwordsused(self):
-    try:
-      return self.data["wordsused"]
-    except KeyError:
-      return None
-
-  def addwordused(self,word):
-    self.data["wordsused"].append(word)
-    return self
-
-  def copy(self):
-    newp = Puzzlestate.blank(self.height(),self.width())
-    newp.data = copy.deepcopy(self.data)
-    return newp
-
-  def inscribe_word(self,word,location,direction):
-    # returns a new puzzle state object containing the word if it was able to inscribe it, else None
-
-    # first, a test
-    thisx,thisy = location
-    xincrement,yincrement = direction
-
-    for c in word:
-      if ( thisx < 0 or thisx >= self.width()
-           or thisy < 0 or thisy >= self.height() ):
-        return None
-      if self.testchar(thisx,thisy,c):
-        pass 
-      else:
-        return None 
-      thisx = thisx + xincrement   
-      thisy = thisy + yincrement   
-
-    # Now that we know it works, let's write in the word for real
-    newpuzzlestate = self.copy()
-    thisx,thisy = location
-    xincrement,yincrement = direction
-
-    for c in word:
-      assert thisx >= 0, "thisx value " + str(thisx) + " before the range"
-      assert thisy >= 0, "thisy value " + str(thisy) + " before the range"
-      assert thisx < newpuzzlestate.height(), \
-              "thisx value " + str(thisx) + " after the range"
-      assert thisy < newpuzzlestate.width(), \
-              "thisy value " + str(thisy) + " after the range"
-      assert newpuzzlestate.getchar(thisx,thisy) == None   \
-             or newpuzzlestate.getchar(thisx,thisy) == '?' \
-             or newpuzzlestate.getchar(thisx,thisy) == '*' \
-             or newpuzzlestate.getchar(thisx,thisy) == '.' \
-             or newpuzzlestate.getchar(thisx,thisy).upper() == c.upper() , "found a conflict"
-
-      newpuzzlestate.setchar(thisx,thisy,c)
-      thisx = thisx + xincrement   
-      thisy = thisy + yincrement   
-    newpuzzlestate.addwordused(word)
-    return newpuzzlestate
-
-  def print(self):
-    for rowno in range(self.height()):
-      for colno in range(self.width()):
-        c = self.getchar(rowno,colno)
-        if c:
-          print("{0:s} ".format(c), end='')
-        else:
-          print('* ', end='')
-      print()
-  def json(self):
-    return json.dumps(self.layout)
-  def possible_word_starts(self, word, direction):
-    # Until we know the desired direction, the word can start anywere in the puzzle.
-    minx = 0
-    maxx = self.width - 1
-
-    miny = 0
-    maxy = self.height() - 1
-
-    # Now let's refine the bounding box based on the desired direction.
-
-    if direction[0] == 0: # it's a horizontal word
-      pass
-    elif direction[0] == -1: # it goes up
-      minx = len(word) 
-    elif direction[0] == 1: # it goes down
-      maxx = maxx - len(word)
-    else:
-      raise ValueError("{} can't be this value".format(direction[0]))
-
-    if direction[1] == 0: # it's a vertical word
-      pass
-    elif direction[1] == -1: # it's right to left
-      miny = len(word)
-    elif direction[1] == 1: # it's left to right
-      miny = miny - len(word)
-    else:
-      raise ValueError("{} can't be this value".format(direction[1]))
-    positionlist = list()
-    for i in range(minx,maxx):
-      for j in range(miny,maxy):
-        newloc = (i,j)
-        positionlist.append(newloc)
-    random.shuffle(positionlist)
-    return positionlist
-
+  def randomword(self,desired_length,desired_ababness=1.0):
+    return self.words_of_length_n[desired_length][random.randint(0,len(self.words_of_length_n[desired_length]))-1]
+    pass
 
 def main():
-  height = 5
-  width = 6
-  p = Puzzlestate.blank(width,height)
-  location = [ 0, 0 ]
-  direction = [ 1, 0 ]
-
-  print("about to inscribe word 1")
-  p1 = p.inscribe_word("super",location,direction)
-  if p1 is None:
-    print("failure")
-  else:
-    print("success!")
-
-  location = [ 2, 1 ]
-  direction = [ 0, -1 ]
-  print("about to inscribe word 2")
-  p2 = p1.inscribe_word("up",location,direction)
-  if p2 is None:
-    print("failure")
-    p2 = p
-  else:
-    print("success")
-
-  p2.print()
-
-  location = [ 5, 4 ]
-  
-  randstate =  random.randrange(len(Puzzlestate.direction))
-  print("randstate is {}".format(randstate))
-  direction = Puzzlestate.direction[randstate]
-  trial_word = "boot"
-  print("about to inscribe word {} at location {}, direction {}".format(trial_word,location,direction))
-  p3 = p2.inscribe_word(trial_word,location,direction)
-  if p3 is None:
-    print("failure")
-    p3 = p2
-  else:
-    print("success")
-  print(p.getchar(1,1))
-
-  print("===========")
-  trial_word = "foo"
-  trial_direction = [ -1, -1 ]
-  word_start_list = p3.possible_word_starts(trial_word, trial_direction)
-
-  for loc in word_start_list:
-    p4 = p3.inscribe_word(trial_word,loc,trial_direction)
-    last_status = p3.inscribe_word(trial_word,loc,trial_direction)
-    if p4 is not None:
-      break
-
-  if p4 is None:
-    print("failure")
-  else:
-    print("success")
-
-  p4.print()
-  print(p4.json())
+  wordspitter = Randomword(0)
+  print("random 3 letter word is {}".format(wordspitter.randomword(3)))
+  print("random 5 letter word is {}".format(wordspitter.randomword(5)))
 
 if __name__ == '__main__':
-    random.seed()
     main()
 
