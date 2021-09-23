@@ -10,6 +10,8 @@ import copy
 from puzzlestate import Puzzlestate
 from randomword import Randomword
 
+ababness = 1.0
+
 def solve(p):
   r = Randomword(0)
 
@@ -21,9 +23,8 @@ def solve(p):
     
   already_tried_words = list()
   while True:
-    tryword = r.randomword(direction, cluenumber, cluelength, 
-                           already_tried_words,
-                           p)
+    (direction,cluenumber,constraints) = p.random_unsolved_clue()
+    tryword = r.randomword(length, already_tried_words, ababness) 
     if tryword is None:
       # no words in the dictionary fit that haven't been tried
       return None
