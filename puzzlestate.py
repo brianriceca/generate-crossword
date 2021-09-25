@@ -113,6 +113,14 @@ Directions are defined as (rowincrement,colincrement)
       return True # Yay!  It's not been filled in yet
     return False # D'oh! The space is already in use with a different letter
 
+  def random_unsolved_clue(self):
+    if random.randint(0,1):
+      direction = "Down"
+    else:
+      direction = "Across"
+
+    cluenumber = self.random.randint(
+
   def getwordsused(self):
     try:
       return self.data["wordsused"]
