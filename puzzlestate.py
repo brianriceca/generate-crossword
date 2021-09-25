@@ -59,6 +59,13 @@ Directions are defined as (rowincrement,colincrement)
         data = json.load(f)
     except OSError:
       return False
+
+    data.cluelocations = list()
+    for row in range(data.height):
+      for col in range(data.width):
+        cluenumber = int(data.puzzle[row][col])
+        if cluenumber > 0:
+          data.cluelocations.append(list(cluenumber,row,col))
     return cls(data)
 
   def writejson(self,filename):
@@ -114,7 +121,8 @@ Directions are defined as (rowincrement,colincrement)
     return False # D'oh! The space is already in use with a different letter
 
   def random_unsolved_clue(self):
-    if random.randint(0,1):
+    (direction, clueno, length = self.unsolved[random.randint(0,
+                                                              length(self.unsolved)-1)]
       direction = "Down"
     else:
       direction = "Across"
