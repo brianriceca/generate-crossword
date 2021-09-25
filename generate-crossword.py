@@ -29,16 +29,18 @@ def solve(p):
                            constraints,
                            ababness) 
     if tryword is None:
-      # no words in the dictionary fit that haven't been tried
+      # Welp, no words in the dictionary fit that haven't been tried.
       return None
       
-    p2 = p.inscribe_word(tryword, direction, cluelength)
-    # the inscribe_word method guarantees it fits
+    p2 = p.copy().inscribe_word(tryword, direction, cluenumber, cluelength)
+    # The inscribe_word method will throw an exception if for some reason
+    # the word to be inscribed does not fit.
+    # The method also removes the inscribed clue from the list of unsolved 
+    # clues.
 
     already_tried_words.append(tryword)
 
-    p3 = solve(p2)
-    if p3:
+    if solve(p2):
       break
 
   return p3
