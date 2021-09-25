@@ -5,17 +5,13 @@ import json
 import copy
 
 class Puzzlestate:
-  '''
-Geometry:
-  
-          0
-          1
-          2
-        ...
-   height-1
-             0 1 2 ... width-1
 
-Directions are defined as (rowincrement,colincrement)
+# Directions are defined as (rowincrement,colincrement)
+  
+  directions = {
+    'Across': [0,1],
+    'Down': [1,0]
+  }
 
   def __init__(self,data):
     self.data = data
@@ -103,13 +99,8 @@ Directions are defined as (rowincrement,colincrement)
     (direction, cluenumber, length) = self.unsolved[random.randint(0,
 
                                                               length(self.unsolved)-1)]
-    assert(direction == "Down" or direction == "Across")
-    if direction = "Down":
-      xinc = 0
-      yinc = 1
-    else:
-      xinc = 1
-      yinc = 0
+    assert(direction in directions.keys()
+    (xinc, yinc) = directions[direction]
   
     # now we gather the constraints, i.e., letters already filled in
 
@@ -128,8 +119,7 @@ Directions are defined as (rowincrement,colincrement)
 
   def getwordsused(self):
     try:
-      return self.data["wordsused"]
-    except KeyError:
+      return self.data["wordsused"] except KeyError:
       return None
 
   def addwordused(self,word):
@@ -142,7 +132,8 @@ Directions are defined as (rowincrement,colincrement)
     return newp
 
   def inscribe_word(self,word,location,direction):
-    # returns a new puzzle state object containing the word if it was able to inscribe it, else None
+    # returns object containing the word if it was able to inscribe it, 
+    # else throws an exception
 
     # first, a test
     thisx,thisy = location
@@ -151,37 +142,35 @@ Directions are defined as (rowincrement,colincrement)
     for c in word:
       if ( thisx < 0 or thisx >= self.width()
            or thisy < 0 or thisy >= self.height() ):
-        return None
+        raise ValueError('out of bounds')
       if self.testchar(thisx,thisy,c):
         pass 
       else:
-        return None 
+        raise ValueError('conflict with already inscribed word')
       thisx = thisx + xincrement   
       thisy = thisy + yincrement   
 
-    # Now that we know it works, let's write in the word for real
-    newpuzzlestate = self.copy()
     thisx,thisy = location
     xincrement,yincrement = direction
 
     for c in word:
       assert thisx >= 0, "thisx value " + str(thisx) + " before the range"
       assert thisy >= 0, "thisy value " + str(thisy) + " before the range"
-      assert thisx < newpuzzlestate.height(), \
+      assert thisx < self.height(), \
               "thisx value " + str(thisx) + " after the range"
-      assert thisy < newpuzzlestate.width(), \
+      assert thisy < self.width(), \
               "thisy value " + str(thisy) + " after the range"
-      assert newpuzzlestate.getchar(thisx,thisy) == None   \
-             or newpuzzlestate.getchar(thisx,thisy) == '?' \
-             or newpuzzlestate.getchar(thisx,thisy) == '*' \
-             or newpuzzlestate.getchar(thisx,thisy) == '.' \
-             or newpuzzlestate.getchar(thisx,thisy).upper() == c.upper() , "found a conflict"
+      assert self.getchar(thisx,thisy) == None   \
+             or self.getchar(thisx,thisy) == '?' \
+             or self.getchar(thisx,thisy) == '*' \
+             or self.getchar(thisx,thisy) == '.' \
+             or self.getchar(thisx,thisy).upper() == c.upper() , "found a conflict"
 
-      newpuzzlestate.setchar(thisx,thisy,c)
+      self.setchar(thisx,thisy,c)
       thisx = thisx + xincrement   
       thisy = thisy + yincrement   
-    newpuzzlestate.addwordused(word)
-    return newpuzzlestate
+    self.addwordused(word)
+    return self
 
   def print(self):
     for rowno in range(self.height()):
