@@ -17,27 +17,6 @@ Geometry:
 
 Directions are defined as (rowincrement,colincrement)
 
-  '''
-
-  direction = {
-    'E': (0,1),
-    'a': (0,1),
-    'NE': (-1,1),
-    'uf': (-1,1),
-    'N': (-1,0),
-    'u': (-1,0),
-    'NW': (-1,-1),
-    'ub': (-1,-1),
-    'W': (0,-1),
-    'b': (0,-1),
-    'SW': (1,-1),
-    'db': (1,-1),
-    'S': (1,0),
-    'd': (1,0),
-    'SE': (1,1),
-    'df': (1,1)
-  }
-
   def __init__(self,data):
     self.data = data
 
@@ -60,12 +39,12 @@ Directions are defined as (rowincrement,colincrement)
     except OSError:
       return False
 
-    data.cluelocations = list()
+    data.cluelocations = dict()
     for row in range(data.height):
       for col in range(data.width):
         cluenumber = int(data.puzzle[row][col])
         if cluenumber > 0:
-          data.cluelocations.append(list(cluenumber,row,col))
+          data.cluelocations[cluenumber] = list(row,col)
     return cls(data)
 
   def writejson(self,filename):
@@ -121,13 +100,31 @@ Directions are defined as (rowincrement,colincrement)
     return False # D'oh! The space is already in use with a different letter
 
   def random_unsolved_clue(self):
-    (direction, clueno, length = self.unsolved[random.randint(0,
-                                                              length(self.unsolved)-1)]
-      direction = "Down"
-    else:
-      direction = "Across"
+    (direction, cluenumber, length) = self.unsolved[random.randint(0,
 
-    cluenumber = self.random.randint(
+                                                              length(self.unsolved)-1)]
+    assert(direction == "Down" or direction == "Across")
+    if direction = "Down":
+      xinc = 0
+      yinc = 1
+    else:
+      xinc = 1
+      yinc = 0
+  
+    # now we gather the constraints, i.e., letters already filled in
+
+    constraints = list()
+    (xloc,yloc) = self.cluelocations[cluenumber]
+
+    i = 0
+    while i < length:
+      if (ord(self.puzzle[xloc][yloc]) >= ord('A') and
+          ord(self.puzzle[xloc][yloc]) <= ord('Z')):
+        constraints.append(i,self.puzzle[xloc][yloc])
+        xloc += xinc
+        yloc += yinc
+        i += 1
+    return (direction, cluenumber, wordlength, constraints)
 
   def getwordsused(self):
     try:
