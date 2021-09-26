@@ -3,6 +3,7 @@
 import random
 import json
 import copy
+import sys
 
 class Puzzlestate:
 
@@ -33,7 +34,12 @@ class Puzzlestate:
       with open(filename) as f:
         data = json.load(f)
     except OSError:
-      return False
+      sys.exit('Could not read json from {}'.format(filename))
+
+    if 'height' not in data.keys() or 'width' not in data.keys():
+      sys.exit('File {} missing puzzle dimension'.format(filename))
+
+    # make sure it's all uppercase
 
     data['cluelocations'] = dict()
     for row in range(data['height']):
@@ -41,6 +47,8 @@ class Puzzlestate:
         cluenumber = int(data['puzzle'][row][col])
         if cluenumber > 0:
           data['cluelocations'][cluenumber] = list(row,col)
+        else:
+          data['cluelocations'][cluenumber] = data['cluelocations'][cluenumber].toupper()
     return cls(data)
 
   def writejson(self,filename):
@@ -48,7 +56,7 @@ class Puzzlestate:
       with open(filename, 'w') as f:
         json.dump(self.data, f, indent=2, sort_keys=True)
     except OSError:
-      return False
+      sys.exit('Could not write json to {}'.format(filename))
     return self
 
   def height(self):
@@ -85,33 +93,34 @@ class Puzzlestate:
       raise IndexError("row number " + str(rowno) + " too big")
     if colno >= self.width():
       raise IndexError("col number " + str(colno) + " too big")
-    if self.getchar(rowno,colno) is None:
+    if (self.getchar(rowno,colno) is None
+        or self.getchar(rowno,colno) == '?'
+        or self.getchar(rowno,colno) == '*'
+        or self.getchar(rowno,colno) == ' ' 
+        or self.getchar(rowno,colno) == '.' 
+        or int(self.getchar(rowno,colno)) > 0 ):
       return True # Yay!  It's not been filled in yet
     if self.getchar(rowno,colno).upper() == c.upper():
       return True # Yay! It's already the character we want.
-    elif ( self.getchar(rowno,colno) == '?'
-             or self.getchar(rowno,colno) == '*'
-             or self.getchar(rowno,colno) == '.' ):
-      return True # Yay!  It's not been filled in yet
     return False # D'oh! The space is already in use with a different letter
 
   def random_unsolved_clue(self):
-    (direction, cluenumber, length) = self.data['unsolved'][random.randint(0,
+    direction, cluenumber, length = self.data['cluelocations'][random.randint(0,
 
                                                             len(self.data['unsolved'])-1)]
-    assert(direction in directions.keys())
+    if direction not in directions.keys():
+      sys.exit('{} is not a direction'.format(direction))
     xinc, yinc = directions[direction]
   
     # now we gather the constraints, i.e., letters already filled in
 
     constraints = list()
-    (xloc,yloc) = self.data['cluelocations'][cluenumber]
+    xloc,yloc = self.data['cluelocations'][cluenumber]
 
     i = 0
     while i < length:
-      if (ord(self.puzzle[xloc][yloc]) >= ord('A') and
-          ord(self.puzzle[xloc][yloc]) <= ord('Z')):
-        constraints.append(i,self.puzzle[xloc][yloc])
+      if self.getchar(xloc,yloc).isalpha():
+        constraints.append(list(i,self.puzzle[xloc][yloc]))
         xloc += xinc
         yloc += yinc
         i += 1
@@ -138,8 +147,7 @@ class Puzzlestate:
 
     # first, a test
     thisx,thisy = location
-    xincrement,yincrement = direction
-
+    xincrement,yincrement = directions[direction]
     for c in word:
       if ( thisx < 0 or thisx >= self.width()
            or thisy < 0 or thisy >= self.height() ):
@@ -151,22 +159,10 @@ class Puzzlestate:
       thisx = thisx + xincrement   
       thisy = thisy + yincrement   
 
+    # OK, it fits
     thisx,thisy = location
     xincrement,yincrement = direction
-
     for c in word:
-      assert thisx >= 0, "thisx value " + str(thisx) + " before the range"
-      assert thisy >= 0, "thisy value " + str(thisy) + " before the range"
-      assert thisx < self.height(), \
-              "thisx value " + str(thisx) + " after the range"
-      assert thisy < self.width(), \
-              "thisy value " + str(thisy) + " after the range"
-      assert self.getchar(thisx,thisy) == None   \
-             or self.getchar(thisx,thisy) == '?' \
-             or self.getchar(thisx,thisy) == '*' \
-             or self.getchar(thisx,thisy) == '.' \
-             or self.getchar(thisx,thisy).upper() == c.upper() , "found a conflict"
-
       self.setchar(thisx,thisy,c)
       thisx = thisx + xincrement   
       thisy = thisy + yincrement   
@@ -184,41 +180,6 @@ class Puzzlestate:
       print()
   def json(self):
     return json.dumps(self.layout)
-  def possible_word_starts(self, word, direction):
-    # Until we know the desired direction, the word can start anywere in the puzzle.
-    minx = 0
-    maxx = self.width - 1
-
-    miny = 0
-    maxy = self.height() - 1
-
-    # Now let's refine the bounding box based on the desired direction.
-
-    if direction[0] == 0: # it's a horizontal word
-      pass
-    elif direction[0] == -1: # it goes up
-      minx = len(word) 
-    elif direction[0] == 1: # it goes down
-      maxx = maxx - len(word)
-    else:
-      raise ValueError("{} can't be this value".format(direction[0]))
-
-    if direction[1] == 0: # it's a vertical word
-      pass
-    elif direction[1] == -1: # it's right to left
-      miny = len(word)
-    elif direction[1] == 1: # it's left to right
-      miny = miny - len(word)
-    else:
-      raise ValueError("{} can't be this value".format(direction[1]))
-    positionlist = list()
-    for i in range(minx,maxx):
-      for j in range(miny,maxy):
-        newloc = (i,j)
-        positionlist.append(newloc)
-    random.shuffle(positionlist)
-    return positionlist
-
 
 def main():
   p = Puzzlestate.fromjsonfile("puzzles/baby-animals-crossword.json")
