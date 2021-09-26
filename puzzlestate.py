@@ -35,12 +35,12 @@ class Puzzlestate:
     except OSError:
       return False
 
-    data.cluelocations = dict()
-    for row in range(data.height):
-      for col in range(data.width):
-        cluenumber = int(data.puzzle[row][col])
+    data['cluelocations'] = dict()
+    for row in range(data['height']):
+      for col in range(data['width']):
+        cluenumber = int(data['puzzle'][row][col])
         if cluenumber > 0:
-          data.cluelocations[cluenumber] = list(row,col)
+          data['cluelocations'][cluenumber] = list(row,col)
     return cls(data)
 
   def writejson(self,filename):
@@ -96,16 +96,16 @@ class Puzzlestate:
     return False # D'oh! The space is already in use with a different letter
 
   def random_unsolved_clue(self):
-    (direction, cluenumber, length) = self.unsolved[random.randint(0,
+    (direction, cluenumber, length) = self.data['unsolved'][random.randint(0,
 
-                                                              length(self.unsolved)-1)]
-    assert(direction in directions.keys()
-    (xinc, yinc) = directions[direction]
+                                                            len(self.data['unsolved'])-1)]
+    assert(direction in directions.keys())
+    xinc, yinc = directions[direction]
   
     # now we gather the constraints, i.e., letters already filled in
 
     constraints = list()
-    (xloc,yloc) = self.cluelocations[cluenumber]
+    (xloc,yloc) = self.data['cluelocations'][cluenumber]
 
     i = 0
     while i < length:
@@ -119,7 +119,8 @@ class Puzzlestate:
 
   def getwordsused(self):
     try:
-      return self.data["wordsused"] except KeyError:
+      return self.data["wordsused"] 
+    except KeyError:
       return None
 
   def addwordused(self,word):
@@ -220,9 +221,8 @@ class Puzzlestate:
 
 
 def main():
-  height = 5
-  width = 6
-  p = Puzzlestate.blank(width,height)
+  p = Puzzlestate.fromjsonfile("puzzles/baby-animals-crossword.json")
+
   location = [ 0, 0 ]
   direction = [ 1, 0 ]
 
