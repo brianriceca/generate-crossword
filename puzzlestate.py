@@ -42,14 +42,21 @@ class Puzzlestate:
         'height' not in data['dimensions'].keys()):
       sys.exit('File {} missing puzzle dimension'.format(filename))
     
+    if 'wordsused' not in data.keys():
+        data['wordsused'] = list()         "wordsused": [],
+    if 'solution' not in data.keys():
+        data['solution'] = \
+                  [[None for i in range(width)] for j in range(height)] 
+    if 'cluelocations' not in data.keys():
+      data['cluelocations'] = dict()
+
     # make sure it's all uppercase
-    
-    data['cluelocations'] = dict()
     for row in range(data['dimensions']['height']):
       for col in range(data['dimensions']['width']):
         clue = data['puzzle'][row][col]
         if clue.isdigit():
           data['cluelocations'][clue] = (row,col)
+
     return cls(data)
     
   def writejson(self,filename):
@@ -61,15 +68,15 @@ class Puzzlestate:
     return self
     
   def writesvg(self,filename):
-    WIDTHINCELLS=self.width()
-    HEIGHTINCELLS=self.height()
-    CELLSIZE_IN_MM=12
-    TOP_MARGIN_IN_MM = CELLSIZE_IN_MM
-    SIDE_MARGIN_IN_MM = CELLSIZE_IN_MM
+    WIDTH=self.width()
+    HEIGHT=self.height()
+    CELLSIZE_MM=12
+    TOP_MARGIN_MM = CELLSIZE_MM
+    SIDE_MARGIN_MM = CELLSIZE_MM
     OFFSETX=1
     OFFSETY=3
-    WIDTH_IN_MM = CELLSIZE_IN_MM*WIDTHINCELLS+2*SIDE_MARGIN_IN_MM
-    HEIGHT_IN_MM = CELLSIZE_IN_MM*HEIGHTINCELLS+2*TOP_MARGIN_IN_MM
+    WIDTH_MM = CELLSIZE_MM*WIDTH+2*SIDE_MARGIN_MM
+    HEIGHT_MM = CELLSIZE_MM*HEIGHT+2*TOP_MARGIN_MM
     CSS_STYLES="""
 text {
      font-size: 2pt;
@@ -77,43 +84,43 @@ text {
 }
 """
       
-    if WIDTH_IN_MM > HEIGHT_IN_MM:
-      PUZZLESIZE = ("{}mm".format(WIDTH_IN_MM),"{}mm".format(WIDTH_IN_MM))
+    if WIDTH_MM > HEIGHT_MM:
+      PUZZLESIZE = ("{}mm".format(WIDTH_MM),"{}mm".format(WIDTH_MM))
     else:
-      PUZZLESIZE = ("{}mm".format(HEIGHT_IN_MM),"{}mm".format(HEIGHT_IN_MM))
+      PUZZLESIZE = ("{}mm".format(HEIGHT_MM),"{}mm".format(HEIGHT_MM))
     
     dwg = svgwrite.Drawing(filename, size=PUZZLESIZE)
-    dwg.viewbox(0, 0, HEIGHT_IN_MM, WIDTH_IN_MM)
+    dwg.viewbox(0, 0, HEIGHT_MM, WIDTH_MM)
     dwg.defs.add(dwg.style(CSS_STYLES))
     
     # draw horizontal lines
-    for i in range(HEIGHTINCELLS+1):
-      y = SIDE_MARGIN_IN_MM + i * CELLSIZE_IN_MM
-      dwg.add(dwg.line(start=(SIDE_MARGIN_IN_MM, y), end=(CELLSIZE_IN_MM*WIDTHINCELLS+SIDE_MARGIN_IN_MM, y),
+    for i in range(HEIGHT+1):
+      y = SIDE_MARGIN_MM + i * CELLSIZE_MM
+      dwg.add(dwg.line(start=(SIDE_MARGIN_MM, y), end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y),
                   stroke='#111111',stroke_width=1))
     
     # draw vertical lines
-    for i in range(WIDTHINCELLS+1):
-      x = TOP_MARGIN_IN_MM + i * CELLSIZE_IN_MM
-      dwg.add(dwg.line(start=(x,TOP_MARGIN_IN_MM), end=(x, CELLSIZE_IN_MM*HEIGHTINCELLS+TOP_MARGIN_IN_MM),
+    for i in range(WIDTH+1):
+      x = TOP_MARGIN_MM + i * CELLSIZE_MM
+      dwg.add(dwg.line(start=(x,TOP_MARGIN_MM), end=(x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
                   stroke='#111111',stroke_width=1))
         
     # insert the clue numbers
-    for row in range(HEIGHTINCELLS):
-      for col in range(WIDTHINCELLS):
+    for row in range(HEIGHT):
+      for col in range(WIDTH):
         if self.getchar(row,col).isdigit():
-          dwg.add(dwg.text(self.getchar(row,col),insert=(OFFSETX + SIDE_MARGIN_IN_MM + row * CELLSIZE_IN_MM,
-                                                  OFFSETY + TOP_MARGIN_IN_MM + (HEIGHTINCELLS-col) * CELLSIZE_IN_MM)))
+          dwg.add(dwg.text(self.getchar(row,col),
+                  insert=(row*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSETX,
+                          (HEIGHT-col)*CELLSIZE_MM+TOP_MARGIN_MM+OFFSETY)))
 
     # insert black boxes
-    for row in range(HEIGHTINCELLS):
-      for col in range(WIDTHINCELLS):
+    for row in range(HEIGHT):
+      for col in range(WIDTH):
         if self.getchar(row,col) == '#':
-          dwg.add(dwg.rect(insert=(SIDE_MARGIN_IN_MM + row * CELLSIZE_IN_MM,
-                                   TOP_MARGIN_IN_MM + (HEIGHTINCELLS-col) * CELLSIZE_IN_MM),
-                           size=(CELLSIZE_IN_MM, CELLSIZE_IN_MM),
-                           fill='black'))
-    
+          dwg.add(dwg.rect(insert=(row*CELLSIZE_MM+SIDE_MARGIN_MM,
+                                   (HEIGHT-col)*CELLSIZE_MM+TOP_MARGIN_MM),
+                           size=(CELLSIZE_MM,CELLSIZE_MM),
+                           fill='gray'))
     
     dwg.save()
       
