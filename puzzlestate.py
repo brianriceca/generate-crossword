@@ -4,6 +4,7 @@ import random
 import json
 import copy
 import sys
+import svgwrite
 
 class Puzzlestate:
 
@@ -35,22 +36,22 @@ class Puzzlestate:
         data = json.load(f)
     except OSError:
       sys.exit('Could not read json from {}'.format(filename))
-
-    if 'height' not in data.keys() or 'width' not in data.keys():
+    
+    if ('dimensions' not in data.keys() or 
+        'width' not in data['dimensions'].keys() or
+        'height' not in data['dimensions'].keys()):
       sys.exit('File {} missing puzzle dimension'.format(filename))
-
+    
     # make sure it's all uppercase
-
+    
     data['cluelocations'] = dict()
-    for row in range(data['height']):
-      for col in range(data['width']):
-        cluenumber = int(data['puzzle'][row][col])
-        if cluenumber > 0:
-          data['cluelocations'][cluenumber] = list(row,col)
-        else:
-          data['cluelocations'][cluenumber] = data['cluelocations'][cluenumber].toupper()
+    for row in range(data['dimensions']['height']):
+      for col in range(data['dimensions']['width']):
+        clue = data['puzzle'][row][col]
+        if clue.isdigit():
+          data['cluelocations'][clue] = (row,col)
     return cls(data)
-
+    
   def writejson(self,filename):
     try:
       with open(filename, 'w') as f:
@@ -58,7 +59,64 @@ class Puzzlestate:
     except OSError:
       sys.exit('Could not write json to {}'.format(filename))
     return self
+    
+  def writesvg(self,filename):
+    WIDTHINCELLS=self.width()
+    HEIGHTINCELLS=self.height()
+    CELLSIZE_IN_MM=12
+    TOP_MARGIN_IN_MM = CELLSIZE_IN_MM
+    SIDE_MARGIN_IN_MM = CELLSIZE_IN_MM
+    OFFSETX=1
+    OFFSETY=3
+    WIDTH_IN_MM = CELLSIZE_IN_MM*WIDTHINCELLS+2*SIDE_MARGIN_IN_MM
+    HEIGHT_IN_MM = CELLSIZE_IN_MM*HEIGHTINCELLS+2*TOP_MARGIN_IN_MM
+    CSS_STYLES="""
+text {
+     font-size: 2pt;
+     font-family: Times New Roman;
+}
+"""
+      
+    if WIDTH_IN_MM > HEIGHT_IN_MM:
+      PUZZLESIZE = ("{}mm".format(WIDTH_IN_MM),"{}mm".format(WIDTH_IN_MM))
+    else:
+      PUZZLESIZE = ("{}mm".format(HEIGHT_IN_MM),"{}mm".format(HEIGHT_IN_MM))
+    
+    dwg = svgwrite.Drawing(filename, size=PUZZLESIZE)
+    dwg.viewbox(0, 0, HEIGHT_IN_MM, WIDTH_IN_MM)
+    dwg.defs.add(dwg.style(CSS_STYLES))
+    
+    # draw horizontal lines
+    for i in range(HEIGHTINCELLS+1):
+      y = SIDE_MARGIN_IN_MM + i * CELLSIZE_IN_MM
+      dwg.add(dwg.line(start=(SIDE_MARGIN_IN_MM, y), end=(CELLSIZE_IN_MM*WIDTHINCELLS+SIDE_MARGIN_IN_MM, y),
+                  stroke='#111111',stroke_width=1))
+    
+    # draw vertical lines
+    for i in range(WIDTHINCELLS+1):
+      x = TOP_MARGIN_IN_MM + i * CELLSIZE_IN_MM
+      dwg.add(dwg.line(start=(x,TOP_MARGIN_IN_MM), end=(x, CELLSIZE_IN_MM*HEIGHTINCELLS+TOP_MARGIN_IN_MM),
+                  stroke='#111111',stroke_width=1))
+        
+    # insert the clue numbers
+    for row in range(HEIGHTINCELLS):
+      for col in range(WIDTHINCELLS):
+        if self.getchar(row,col).isdigit():
+          dwg.add(dwg.text(self.getchar(row,col),insert=(OFFSETX + SIDE_MARGIN_IN_MM + row * CELLSIZE_IN_MM,
+                                                  OFFSETY + TOP_MARGIN_IN_MM + (HEIGHTINCELLS-col) * CELLSIZE_IN_MM)))
 
+    # insert black boxes
+    for row in range(HEIGHTINCELLS):
+      for col in range(WIDTHINCELLS):
+        if self.getchar(row,col) == '#':
+          dwg.add(dwg.rect(insert=(SIDE_MARGIN_IN_MM + row * CELLSIZE_IN_MM,
+                                   TOP_MARGIN_IN_MM + (HEIGHTINCELLS-col) * CELLSIZE_IN_MM),
+                           size=(CELLSIZE_IN_MM, CELLSIZE_IN_MM),
+                           fill='black'))
+    
+    
+    dwg.save()
+      
   def height(self):
     return self.data["dimensions"]["height"]
 
@@ -66,7 +124,7 @@ class Puzzlestate:
     return self.data["dimensions"]["width"]
 
   def getchar(self,rowno,colno):
-    return self.data["solution"][rowno][colno]
+    return self.data["puzzle"][rowno][colno]
 
   def setchar(self,rowno,colno,c):
     rowno = int(rowno)
@@ -184,61 +242,8 @@ class Puzzlestate:
 def main():
   p = Puzzlestate.fromjsonfile("puzzles/baby-animals-crossword.json")
 
-  location = [ 0, 0 ]
-  direction = [ 1, 0 ]
-
-  print("about to inscribe word 1")
-  p1 = p.inscribe_word("super",location,direction)
-  if p1 is None:
-    print("failure")
-  else:
-    print("success!")
-
-  location = [ 2, 1 ]
-  direction = [ 0, -1 ]
-  print("about to inscribe word 2")
-  p2 = p1.inscribe_word("up",location,direction)
-  if p2 is None:
-    print("failure")
-    p2 = p
-  else:
-    print("success")
-
-  p2.print()
-
-  location = [ 5, 4 ]
-  
-  randstate =  random.randrange(len(Puzzlestate.direction))
-  print("randstate is {}".format(randstate))
-  direction = Puzzlestate.direction[randstate]
-  trial_word = "boot"
-  print("about to inscribe word {} at location {}, direction {}".format(trial_word,location,direction))
-  p3 = p2.inscribe_word(trial_word,location,direction)
-  if p3 is None:
-    print("failure")
-    p3 = p2
-  else:
-    print("success")
-  print(p.getchar(1,1))
-
-  print("===========")
-  trial_word = "foo"
-  trial_direction = [ -1, -1 ]
-  word_start_list = p3.possible_word_starts(trial_word, trial_direction)
-
-  for loc in word_start_list:
-    p4 = p3.inscribe_word(trial_word,loc,trial_direction)
-    last_status = p3.inscribe_word(trial_word,loc,trial_direction)
-    if p4 is not None:
-      break
-
-  if p4 is None:
-    print("failure")
-  else:
-    print("success")
-
-  p4.print()
-  print(p4.json())
+  p.writesvg("puzzles/baby-animals-crossword.svg")
+#  p.writejson("/tmp/foo.json")
 
 if __name__ == '__main__':
     random.seed()
