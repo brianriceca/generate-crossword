@@ -42,20 +42,25 @@ class Puzzlestate:
         'height' not in data['dimensions'].keys()):
       sys.exit('File {} missing puzzle dimension'.format(filename))
     
+    width = int(data['dimensions']['width'])
+    height = int(data['dimensions']['height'])
+
     if 'wordsused' not in data.keys():
-        data['wordsused'] = list()         "wordsused": [],
+        data['wordsused'] = list()
     if 'solution' not in data.keys():
         data['solution'] = \
                   [[None for i in range(width)] for j in range(height)] 
     if 'cluelocations' not in data.keys():
       data['cluelocations'] = dict()
 
-    # make sure it's all uppercase
-    for row in range(data['dimensions']['height']):
-      for col in range(data['dimensions']['width']):
+    # squirrel away the clue locations; make sure any filled clues are uppercase
+    for row in range(height):
+      for col in range(width):
         clue = data['puzzle'][row][col]
         if clue.isdigit():
           data['cluelocations'][clue] = (row,col)
+        elif clue.isalpha():
+          data['puzzle'][row][col] = data['puzzle']['row']['col'].toupper()
 
     return cls(data)
     
@@ -81,6 +86,7 @@ class Puzzlestate:
 text {
      font-size: 2pt;
      font-family: Times New Roman;
+     color: red;
 }
 """
       
@@ -94,34 +100,50 @@ text {
     dwg.defs.add(dwg.style(CSS_STYLES))
     
     # draw horizontal lines
-    for i in range(HEIGHT+1):
-      y = SIDE_MARGIN_MM + i * CELLSIZE_MM
+    for i in range(HEIGHT):
+      y = TOP_MARGIN_MM + i * CELLSIZE_MM
+#      print("horizontal line from ({},{}) to ({},{})".format(SIDE_MARGIN_MM, y, CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y))
       dwg.add(dwg.line(start=(SIDE_MARGIN_MM, y), end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y),
                   stroke='#111111',stroke_width=1))
+    dwg.add(dwg.line(start=(SIDE_MARGIN_MM-2, 
+                            TOP_MARGIN_MM+(HEIGHT+1)*CELLSIZE_MM),
+                     end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM+2, 
+                          TOP_MARGIN_MM+(HEIGHT+1)*CELLSIZE_MM),
+                  stroke='#00FF00',stroke_width=2))
+    dwg.add(dwg.line(start=(SIDE_MARGIN_MM-2, TOP_MARGIN_MM), 
+                     end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM+2, TOP_MARGIN_MM),
+                  stroke='#FFFF00',stroke_width=2))
     
     # draw vertical lines
     for i in range(WIDTH+1):
-      x = TOP_MARGIN_MM + i * CELLSIZE_MM
+      x = SIDE_MARGIN_MM + i * CELLSIZE_MM
+#      print("vertical line from ({},{}) to ({},{})".format(x,TOP_MARGIN_MM, x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM))
       dwg.add(dwg.line(start=(x,TOP_MARGIN_MM), end=(x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
                   stroke='#111111',stroke_width=1))
         
-    # insert the clue numbers
+#    # insert the clue numbers
     for row in range(HEIGHT):
       for col in range(WIDTH):
         if self.getchar(row,col).isdigit():
           dwg.add(dwg.text(self.getchar(row,col),
-                  insert=(row*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSETX,
-                          (HEIGHT-col)*CELLSIZE_MM+TOP_MARGIN_MM+OFFSETY)))
+                  insert=(
+                          col*CELLSIZE_MM+TOP_MARGIN_MM+OFFSETX,
+                          row*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSETY,
+                         )))
 
     # insert black boxes
     for row in range(HEIGHT):
       for col in range(WIDTH):
         if self.getchar(row,col) == '#':
-          dwg.add(dwg.rect(insert=(row*CELLSIZE_MM+SIDE_MARGIN_MM,
-                                   (HEIGHT-col)*CELLSIZE_MM+TOP_MARGIN_MM),
+          dwg.add(dwg.rect(insert=(
+                                   col*CELLSIZE_MM+TOP_MARGIN_MM,
+                                   row*CELLSIZE_MM+SIDE_MARGIN_MM
+                                  ),
                            size=(CELLSIZE_MM,CELLSIZE_MM),
                            fill='gray'))
     
+
+
     dwg.save()
       
   def height(self):
