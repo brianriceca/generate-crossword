@@ -105,14 +105,14 @@ text {
 #      print("horizontal line from ({},{}) to ({},{})".format(SIDE_MARGIN_MM, y, CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y))
       dwg.add(dwg.line(start=(SIDE_MARGIN_MM, y), end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y),
                   stroke='#111111',stroke_width=1))
-    dwg.add(dwg.line(start=(SIDE_MARGIN_MM-2, 
-                            TOP_MARGIN_MM+(HEIGHT+1)*CELLSIZE_MM),
-                     end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM+2, 
-                          TOP_MARGIN_MM+(HEIGHT+1)*CELLSIZE_MM),
-                  stroke='#00FF00',stroke_width=2))
-    dwg.add(dwg.line(start=(SIDE_MARGIN_MM-2, TOP_MARGIN_MM), 
-                     end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM+2, TOP_MARGIN_MM),
-                  stroke='#FFFF00',stroke_width=2))
+    dwg.add(dwg.line(start=(SIDE_MARGIN_MM-1, 
+                            TOP_MARGIN_MM+HEIGHT*CELLSIZE_MM),
+                     end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM+1, 
+                          TOP_MARGIN_MM+HEIGHT*CELLSIZE_MM),
+                  stroke='#00FF00',stroke_width=1))
+    dwg.add(dwg.line(start=(SIDE_MARGIN_MM-1, TOP_MARGIN_MM), 
+                     end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM+1, TOP_MARGIN_MM),
+                  stroke='#FFFF00',stroke_width=1))
     
     # draw vertical lines
     for i in range(WIDTH+1):
