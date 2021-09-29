@@ -50,20 +50,46 @@ class Puzzlestate:
     if 'solution' not in data.keys():
         data['solution'] = \
                   [[None for i in range(width)] for j in range(height)] 
-    if 'cluelocations' not in data.keys():
-      data['cluelocations'] = dict()
+    if 'answerlocations' not in self.data.keys():
+      self.data['answerlocations'] = self.dict()
+    if 'answerlengths' not in self.data.keys():
+      self.data['answerlengths'] = dict()
 
     # squirrel away the clue locations; make sure any filled clues are uppercase
     for row in range(height):
       for col in range(width):
-        clue = data['puzzle'][row][col]
-        if clue.isdigit():
-          data['cluelocations'][clue] = (row,col)
-        elif clue.isalpha():
-          data['puzzle'][row][col] = data['puzzle']['row']['col'].toupper()
+        cellcontents = self.data['puzzle'][row][col]
+        if cellcontents.isdigit():
+          self.data['puzzle'][row][col] = int(cellcontents)
+          self.data['answerlocations'][cellcontents] = (row,col)
+        elif cellcontents.isalpha():
+          self.data['puzzle'][row][col] = self.data['puzzle']['row']['col'].toupper()
+
+    # now squirrel away the length of the answer for each clue
 
     return cls(data)
-    
+      for direction in self.data['clues']:
+        if direction not in Puzzlestate.directions.keys():
+          sys.exit("{} is not a direction".format(direction))o
+        for cluenumber in self.data['clues'][direction]:
+        xloc,yloc = data['answerlocations'][cluenumber]
+        if self.data['puzzle'][xloc][yloc] != cluenumber:
+          sys.exit('found a mismatch at ({},{}): expected {}, saw {}".format(
+                                                                            xloc,
+                                                                            yloc,
+                                                                            cluenumber,
+                                                                            self.data['puzzle'][xloc][yloc]))
+        # now we count the number of blanks to the next '#' or boundary
+        
+        self.data['answerlengths'][repr([ direction, cluenumber ])] = 1
+
+        while True:
+          xloc += Puzzlestate.directions[directions][0]
+          yloc += Puzzlestate.directions[directions][1]
+          if xloc == self.width() or yloc = self.height or self.data['puzzle'][xloc][yloc] == '#':
+            break
+          self.data['answerlengths'][repr([ direction, cluenumber ])] += 1
+
   def writejson(self,filename):
     try:
       with open(filename, 'w') as f:
@@ -191,18 +217,28 @@ text {
       return True # Yay! It's already the character we want.
     return False # D'oh! The space is already in use with a different letter
 
+  def length_of_puzzleword(self, direction, cluenumber):
+    i = 0
+    while i < length:
+      if self.getchar(xloc,yloc).isalpha():
+        constraints.append(list(i,self.puzzle[xloc][yloc]))
+        xloc += xinc
+        yloc += yinc
+        i += 1
+     #####  
+
   def random_unsolved_clue(self):
-    direction, cluenumber, length = self.data['cluelocations'][random.randint(0,
+    direction, cluenumber, length = self.data['unsolved'][random.randint(0,
 
                                                             len(self.data['unsolved'])-1)]
-    if direction not in directions.keys():
+    if direction not in Puzzlestate.directions.keys():
       sys.exit('{} is not a direction'.format(direction))
-    xinc, yinc = directions[direction]
+    xinc, yinc = Puzzlestate.directions[direction]
   
     # now we gather the constraints, i.e., letters already filled in
 
     constraints = list()
-    xloc,yloc = self.data['cluelocations'][cluenumber]
+    xloc,yloc = self.data['answerlocations'][cluenumber]
 
     i = 0
     while i < length:
@@ -234,7 +270,7 @@ text {
 
     # first, a test
     thisx,thisy = location
-    xincrement,yincrement = directions[direction]
+    xincrement,yincrement = Puzzlestate.directions[direction]
     for c in word:
       if ( thisx < 0 or thisx >= self.width()
            or thisy < 0 or thisy >= self.height() ):
