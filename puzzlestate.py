@@ -50,34 +50,36 @@ class Puzzlestate:
     if 'solution' not in data.keys():
         data['solution'] = \
                   [[None for i in range(width)] for j in range(height)] 
-    if 'answerlocations' not in self.data.keys():
-      self.data['answerlocations'] = self.dict()
-    if 'answerlengths' not in self.data.keys():
-      self.data['answerlengths'] = dict()
+    if 'answerlocations' not in data.keys():
+      data['answerlocations'] = dict()
+    if 'answerlengths' not in data.keys():
+      data['answerlengths'] = dict()
 
     # squirrel away the clue locations; make sure any filled clues are uppercase
     for row in range(height):
       for col in range(width):
-        cellcontents = self.data['puzzle'][row][col]
+        cellcontents = data['puzzle'][row][col]
         if cellcontents.isdigit():
-          self.data['puzzle'][row][col] = int(cellcontents)
-          self.data['answerlocations'][cellcontents] = (row,col)
+          data['puzzle'][row][col] = int(cellcontents)
+          data['answerlocations'][cellcontents] = [row,col]
         elif cellcontents.isalpha():
-          self.data['puzzle'][row][col] = self.data['puzzle']['row']['col'].toupper()
+          data['puzzle'][row][col] = data['puzzle']['row']['col'].toupper()
 
     # now squirrel away the length of the answer for each clue
 
-      for direction in self.data['clues']:
+      for direction in data['clues']:
         if direction not in Puzzlestate.directions.keys():
           sys.exit("{} is not a direction".format(direction))
-        for cluenumber in self.data['clues'][direction]:
-          xloc,yloc = data['answerlocations'][cluenumber]
-          if self.data['puzzle'][xloc][yloc] != cluenumber:
+        for cluenumber in data['clues'][direction]:
+          print(repr(data['answerlocations']))
+          xloc,yloc = data['answerlocations'][cluenumber[0]]
+          # [1] is the clue for a human solver, we don't care about that
+          if data['puzzle'][xloc][yloc] != cluenumber:
             sys.exit('found a mismatch at ({},{}): expected {}, saw {}'.format(
                                                                             xloc,
                                                                             yloc,
                                                                             cluenumber,
-                                                                            self.data['puzzle'][xloc][yloc]))
+                                                                            data['puzzle'][xloc][yloc]))
         # now we count the number of blanks to the next '#' or boundary
         
         self.data['answerlengths'][repr([ direction, cluenumber ])] = 1
@@ -85,9 +87,9 @@ class Puzzlestate:
         while True:
           xloc += Puzzlestate.directions[directions][0]
           yloc += Puzzlestate.directions[directions][1]
-          if xloc == self.width() or yloc = self.height or self.data['puzzle'][xloc][yloc] == '#':
+          if xloc == data['width'] or yloc == data['height'] or data['puzzle'][xloc][yloc] == '#':
             break
-          self.data['answerlengths'][repr([ direction, cluenumber ])] += 1
+          data['answerlengths'][repr([ direction, cluenumber ])] += 1
 
     return cls(data)
 
