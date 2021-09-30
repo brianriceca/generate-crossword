@@ -67,14 +67,13 @@ class Puzzlestate:
 
     # now squirrel away the length of the answer for each clue
 
-    return cls(data)
       for direction in self.data['clues']:
         if direction not in Puzzlestate.directions.keys():
-          sys.exit("{} is not a direction".format(direction))o
+          sys.exit("{} is not a direction".format(direction))
         for cluenumber in self.data['clues'][direction]:
-        xloc,yloc = data['answerlocations'][cluenumber]
-        if self.data['puzzle'][xloc][yloc] != cluenumber:
-          sys.exit('found a mismatch at ({},{}): expected {}, saw {}".format(
+          xloc,yloc = data['answerlocations'][cluenumber]
+          if self.data['puzzle'][xloc][yloc] != cluenumber:
+            sys.exit('found a mismatch at ({},{}): expected {}, saw {}'.format(
                                                                             xloc,
                                                                             yloc,
                                                                             cluenumber,
@@ -89,6 +88,8 @@ class Puzzlestate:
           if xloc == self.width() or yloc = self.height or self.data['puzzle'][xloc][yloc] == '#':
             break
           self.data['answerlengths'][repr([ direction, cluenumber ])] += 1
+
+    return cls(data)
 
   def writejson(self,filename):
     try:

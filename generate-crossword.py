@@ -43,7 +43,7 @@ def solve(p):
     if solve(p2):
       break
 
-  return p3
+  return p2
 
     
 def main():
