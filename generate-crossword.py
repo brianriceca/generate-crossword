@@ -20,7 +20,7 @@ def solve(p):
     
   already_tried_words = list()
   while True:
-    (direction, cluenumber, wordlength, constraints) = p.random_unsolved_clue()
+    direction, cluenumber, wordlength, constraints = p.random_unsolved_clue()
     if direction is None:
       # puzzle is solved! no more unsolved clues
       return p
@@ -34,7 +34,7 @@ def solve(p):
       return None
       
     p2 = p.copy().inscribe_word(tryword, direction, cluenumber, cluelength)
-    # The inscribe_word method will throw an exception if for some reason
+    # The inscribe_word method will crash if for some reason
     # the word to be inscribed does not fit.
     # The method also removes the inscribed clue from the list of unsolved 
     # clues.
