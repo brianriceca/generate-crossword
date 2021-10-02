@@ -93,23 +93,18 @@ class Puzzlestate:
         sys.exit('puzzle row {} should be {} wide, is {} wide'.format(rownumber,
                                                                       width,
                                                                       len(row)))
-        for colnumber, col in enumerate(row):
-          if isinstance(row[colnumber], dict):
-            sys.exit('I don\'t know how to deal with fancy cells yet')
-          elif (type(row[colnumber] == int or
-                type(row[colnumber] == str))):
-            continue
-          sys.exit('found a weird item at [{},{}] : {}'.format(rownumber,colnumber,repr(row[colnumber])))        
+      for colnumber, col in enumerate(row):
+        if isinstance(row[colnumber], dict) or isinstance(row[colnumber], list):
+          sys.exit('I don\'t know how to deal with fancy cells yet')
+        elif type(row[colnumber]) == str and row[colnumber].isdigit():
+          data['puzzle'][row][col] = int(row[colnumber])
 
-    # squirrel away the clue locations; make sure any filled clues are uppercase
-    for row in range(height):
-      for col in range(width):
-        cellcontents = data['puzzle'][row][col]
-        if cellcontents.isdigit():
-          data['puzzle'][row][col] = int(cellcontents)
-          data['answerlocations'][int(cellcontents)] = [row,col]
-        elif cellcontents.isalpha():
-          data['puzzle'][row][col] = data['puzzle']['row']['col'].toupper()
+        if isinstance(row[colnumber], int):
+          data['answerlocations'][row[colnumber]] = [row,col]
+        elif isinstance(row[colnumber], str):
+          data['answerlocations'][row[colnumber]] = data['answerlocations'][row[colnumber]].toupper()
+        else:
+          sys.exit('found a weird item at [{},{}] : {}'.format(rownumber,colnumber,repr(row[colnumber])))        
 
     # now squirrel away the length of the answer for each clue
 
@@ -118,13 +113,16 @@ class Puzzlestate:
           sys.exit("{} is not a direction".format(direction))
         for cluenumber in data['clues'][direction]:
           print(repr(data['answerlocations']))
-          xloc,yloc = data['answerlocations'][cluenumber[0]]
+          if cluenumber[0] in data['answerlocations']:
+            xloc,yloc = data['answerlocations'][cluenumber[0]]
+          else:
+            sys.exit('location {} seems to be missing from the puzzle'.format(cluenumber[0]))
           # [1] is the clue for a human solver, we don't care about that
-          if data['puzzle'][xloc][yloc] != cluenumber:
+          if data['puzzle'][xloc][yloc] != cluenumber[0]:
             sys.exit('found a mismatch at ({},{}): expected {}, saw {}'.format(
                                                                             xloc,
                                                                             yloc,
-                                                                            cluenumber,
+                                                                            cluenumber[0],
                                                                             data['puzzle'][xloc][yloc]))
         # now we count the number of blanks to the next '#' or boundary
         
@@ -135,7 +133,7 @@ class Puzzlestate:
           yloc += Puzzlestate.directions[direction][1]
           if xloc == data['width'] or yloc == data['height'] or data['puzzle'][xloc][yloc] == '#':
             break
-          data['answerlengths'][repr([ direction, cluenumber ])] += 1
+          data['answerlengths'][repr([ direction, cluenumber[0] ])] += 1
 
     return cls(data)
 
