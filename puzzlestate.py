@@ -101,21 +101,42 @@ class Puzzlestate:
       sys.exit('Could not write json to {}'.format(filename))
     return self
     
-  def writesvg(self,filename):
+  def writesvg(self,filename,**kwargs):
+    showcluenumbers=True
+    showsolvedcells=False
+    if 'showcluenumbers' in kwargs:
+      if isinstance(kwargs['showcluenumbers'], bool):
+        showcluenumbers = kwargs['showcluenumbers']
+      else:
+        sys.exit('writesvg keyword args need True or False')
+
+    if 'showsolvedcells' in kwargs:
+      if isinstance(kwargs['showsolvedcells'], bool):
+        showsolvedcells = kwargs['showsolvedcells']
+      else:
+        sys.exit('writesvg keyword args need True or False')
+
+
     WIDTH=self.width()
     HEIGHT=self.height()
     CELLSIZE_MM=12
     TOP_MARGIN_MM = CELLSIZE_MM
     SIDE_MARGIN_MM = CELLSIZE_MM
-    OFFSETX=1
-    OFFSETY=3
+    OFFSET_CLUENUM_X=1
+    OFFSET_CLUENUM_Y=3
+    OFFSET_SOLUTION_X=6
+    OFFSET_SOLUTION_Y=9
     WIDTH_MM = CELLSIZE_MM*WIDTH+2*SIDE_MARGIN_MM
     HEIGHT_MM = CELLSIZE_MM*HEIGHT+2*TOP_MARGIN_MM
+    BLACKBLOCK_COLOR = 'gray'
     CSS_STYLES="""
-text {
+text.cluenumber {
      font-size: 2pt;
      font-family: Times New Roman;
-     color: red;
+}
+text.solvedcell {
+     font-size: 8pt;
+     font-family: Arial;
 }
 """
       
@@ -124,22 +145,22 @@ text {
     else:
       PUZZLESIZE = ("{}mm".format(HEIGHT_MM),"{}mm".format(HEIGHT_MM))
     
-    dwg = svgwrite.Drawing(filename, size=PUZZLESIZE)
-    dwg.viewbox(0, 0, HEIGHT_MM, WIDTH_MM)
-    dwg.defs.add(dwg.style(CSS_STYLES))
+    drawing = svgwrite.Drawing(filename, size=PUZZLESIZE)
+    drawing.viewbox(0, 0, HEIGHT_MM, WIDTH_MM)
+    drawing.defs.add(drawing.style(CSS_STYLES))
     
     # draw horizontal lines
     for i in range(HEIGHT):
       y = TOP_MARGIN_MM + i * CELLSIZE_MM
 #      print("horizontal line from ({},{}) to ({},{})".format(SIDE_MARGIN_MM, y, CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y))
-      dwg.add(dwg.line(start=(SIDE_MARGIN_MM, y), end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y),
-                  stroke='#111111',stroke_width=1))
-    dwg.add(dwg.line(start=(SIDE_MARGIN_MM-1, 
+      drawing.add(drawing.line(start=(SIDE_MARGIN_MM, y), end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y),
+                 stroke=BLACKBLOCK_COLOR,stroke_width=1))
+    drawing.add(drawing.line(start=(SIDE_MARGIN_MM-1, 
                             TOP_MARGIN_MM+HEIGHT*CELLSIZE_MM),
                      end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM+1, 
                           TOP_MARGIN_MM+HEIGHT*CELLSIZE_MM),
                   stroke='#00FF00',stroke_width=1))
-    dwg.add(dwg.line(start=(SIDE_MARGIN_MM-1, TOP_MARGIN_MM), 
+    drawing.add(drawing.line(start=(SIDE_MARGIN_MM-1, TOP_MARGIN_MM), 
                      end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM+1, TOP_MARGIN_MM),
                   stroke='#FFFF00',stroke_width=1))
     
@@ -147,33 +168,43 @@ text {
     for i in range(WIDTH+1):
       x = SIDE_MARGIN_MM + i * CELLSIZE_MM
 #      print("vertical line from ({},{}) to ({},{})".format(x,TOP_MARGIN_MM, x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM))
-      dwg.add(dwg.line(start=(x,TOP_MARGIN_MM), end=(x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
-                  stroke='#111111',stroke_width=1))
+      drawing.add(drawing.line(start=(x,TOP_MARGIN_MM), end=(x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
+                  stroke=BLACKBLOCK_COLOR,stroke_width=1))
         
-#    # insert the clue numbers
-    for row in range(HEIGHT):
-      for col in range(WIDTH):
-        if self.getchar(row,col).isdigit():
-          dwg.add(dwg.text(self.getchar(row,col),
-                  insert=(
-                          col*CELLSIZE_MM+TOP_MARGIN_MM+OFFSETX,
-                          row*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSETY,
-                         )))
-
     # insert black boxes
     for row in range(HEIGHT):
       for col in range(WIDTH):
         if self.getchar(row,col) == '#':
-          dwg.add(dwg.rect(insert=(
+          drawing.add(drawing.rect(insert=(
                                    col*CELLSIZE_MM+TOP_MARGIN_MM,
                                    row*CELLSIZE_MM+SIDE_MARGIN_MM
                                   ),
                            size=(CELLSIZE_MM,CELLSIZE_MM),
-                           fill='gray'))
-    
+                           fill=BLACKBLOCK_COLOR))
+  
+    if showcluenumbers:
+      for row in range(HEIGHT):
+        for col in range(WIDTH):
+          if self.getchar(row,col).isdigit():
+            drawing.add(drawing.group(drawing.text(self.getchar(row,col),
+                    insert=(
+                            col*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_CLUENUM_X,
+                            row*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_CLUENUM_Y,
+                           ))), class_='cluenumber')
+
+    if showsolvedcells:
+      for row in range(HEIGHT):
+        for col in range(WIDTH):
+          c = self.data['solution'][row][col]
+          if c.isalpha():
+            drawing.add(drawing.group(drawing.text(self.getchar(row,col),
+                    insert=(
+                            col*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_SOLUTION_X,
+                            row*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_SOLUTION_Y,
+                           ))),class_='solvedcell')
 
 
-    dwg.save()
+    drawing.save()
       
   def height(self):
     return self.data["dimensions"]["height"]
