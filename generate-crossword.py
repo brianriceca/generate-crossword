@@ -3,6 +3,7 @@
 generate-crossword.py: fill a crossword puzzle bracket with random words
 
 usage: generate-crossword.py puzzlefile.json
+'''
 
 import sys
 import copy
@@ -47,11 +48,17 @@ def solve(p):
 
     
 def main():
-  if len(sys.argv) != 2:
-    print("usage: {} puzzlefile.json".format(sys.argv[0]))
-    sys.exit(1)
+  infile = ''
+  if len(sys.argv) == 2:
+    infile = sys.argv[1]
+  else:
+#    print("usage: {} puzzlefile.json".format(sys.argv[0]))
+#    sys.exit(1)
+    pass
+  if not infile:
+    infile = '/Users/brice/generate-crossword/puzzles/baby-animals-crossword.json'
 
-  p = Puzzlestate.fromjsonfile(sys.argv[1])
+  p = Puzzlestate.fromjsonfile(infile)
 
   solve(p)
   p.print()
