@@ -42,6 +42,28 @@ class Puzzlestate:
         'height' not in data['dimensions'].keys()):
       sys.exit('File {} missing puzzle dimension'.format(filename))
     
+    if type(data['dimensions']['width']) == float:
+      sys.exit('silly rabbit, widths can\'t be floats')
+    elif type(data['dimensions']['width']) == str:
+      if data['dimensions']['width'].isnumeric():
+        data['dimensions']['width'] = int(data['dimensions']['width'])
+      else:
+        sys.exit('invalid width')
+
+    if data['dimensions']['width'] <= 0:
+      sys.exit('width must be positive')
+
+    if type(data['dimensions']['height']) == float:
+      sys.exit('silly rabbit, heights can\'t be float')
+    elif type(data['dimensions']['height']) == str:
+      if data['dimensions']['height'].isnumeric():
+        data['dimensions']['height'] = int(data['dimensions']['height'])
+      else:
+        sys.exit('invalid height')
+
+    if data['dimensions']['height'] <= 0:
+      sys.exit('height must be positive')
+
     width = int(data['dimensions']['width'])
     height = int(data['dimensions']['height'])
 
@@ -54,6 +76,28 @@ class Puzzlestate:
       data['answerlocations'] = dict()
     if 'answerlengths' not in data.keys():
       data['answerlengths'] = dict()
+  
+    # let's validate the puzzle and die if it is broken
+
+    if 'puzzle' not in data:
+      sys.exit('this puzzle file lacks a puzzle')
+    if not isinstance(data['puzzle'], dict):
+      sys.exit('this puzzle file\'s puzzle is the wrong kind of data structure')
+
+    if len(data['puzzle']) != height:
+        sys.exit('puzzle should be {} columns high, is {}'.format(height,len(data['puzzle'])))
+    for rownumber, row in enumerate(data['puzzle']):
+      if len(row) != width:
+        sys.exit('puzzle row {} should be {} wide, is {} wide'.format(rownumber,
+                                                                      width,
+                                                                      len(row)))
+        for colnumber, col in enumerate(row):
+          if isinstance(row[colnumber], dict):
+            sys.exit('I don\'t know how to deal with fancy cells yet')
+          elif (type(row[colnumber] == int or
+                type(row[colnumber] == str))):
+            continue
+          sys.exit('found a weird item at [{},{}] : {}'.format(rownumber,colnumber,repr(row[colnumber])))        
 
     # squirrel away the clue locations; make sure any filled clues are uppercase
     for row in range(height):
@@ -82,11 +126,11 @@ class Puzzlestate:
                                                                             data['puzzle'][xloc][yloc]))
         # now we count the number of blanks to the next '#' or boundary
         
-        self.data['answerlengths'][repr([ direction, cluenumber ])] = 1
+        data['answerlengths'][repr([ direction, cluenumber ])] = 1
 
         while True:
-          xloc += Puzzlestate.directions[directions][0]
-          yloc += Puzzlestate.directions[directions][1]
+          xloc += Puzzlestate.directions[direction][0]
+          yloc += Puzzlestate.directions[direction][1]
           if xloc == data['width'] or yloc == data['height'] or data['puzzle'][xloc][yloc] == '#':
             break
           data['answerlengths'][repr([ direction, cluenumber ])] += 1
@@ -251,16 +295,6 @@ text.solvedcell {
       return True # Yay! It's already the character we want.
     return False # D'oh! The space is already in use with a different letter
 
-  def length_of_puzzleword(self, direction, cluenumber):
-    i = 0
-    while i < length:
-      if self.getchar(xloc,yloc).isalpha():
-        constraints.append(list(i,self.puzzle[xloc][yloc]))
-        xloc += xinc
-        yloc += yinc
-        i += 1
-     #####  
-
   def random_unsolved_clue(self):
     direction, cluenumber, length = self.data['unsolved'][random.randint(0,
 
@@ -274,14 +308,16 @@ text.solvedcell {
     constraints = list()
     xloc,yloc = self.data['answerlocations'][cluenumber]
 
-    i = 0
-    while i < length:
+    length = 0
+    while True:
+      xloc += xinc
+      yloc += yinc
+      length += 1
       if self.getchar(xloc,yloc).isalpha():
-        constraints.append(list(i,self.puzzle[xloc][yloc]))
-        xloc += xinc
-        yloc += yinc
-        i += 1
-    return (direction, cluenumber, wordlength, constraints)
+        constraints.append(list(length,self.puzzle[xloc][yloc]))
+      elif (self.getchar(xloc,yloc) == '#' or xloc == self.width() or yloc == self.height()):
+        break
+    return [direction, cluenumber, length, constraints]
 
   def getwordsused(self):
     try:
