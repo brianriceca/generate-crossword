@@ -85,7 +85,8 @@ class Puzzlestate:
       sys.exit('this puzzle file\'s puzzle is the wrong kind of data structure')
 
     if len(data['puzzle']) != height:
-        sys.exit('puzzle should be {} columns high, is {}'.format(height,len(data['puzzle'])))
+      sys.exit('puzzle should be {} columns high, is {}'.format(height,len(data['puzzle'])))
+
     for rownumber, row in enumerate(data['puzzle']):
       if not isinstance(row, list):
         sys.exit('this puzzle file\'s puzzle is the wrong kind of data structure')
@@ -93,47 +94,48 @@ class Puzzlestate:
         sys.exit('puzzle row {} should be {} wide, is {} wide'.format(rownumber,
                                                                       width,
                                                                       len(row)))
-      for colnumber, col in enumerate(row):
-        if isinstance(row[colnumber], dict) or isinstance(row[colnumber], list):
-          sys.exit('I don\'t know how to deal with fancy cells yet')
-        elif type(row[colnumber]) == str and row[colnumber].isdigit():
-          data['puzzle'][row][col] = int(row[colnumber])
-
-        if isinstance(row[colnumber], int):
-          data['answerlocations'][row[colnumber]] = [row,col]
-        elif isinstance(row[colnumber], str):
-          data['answerlocations'][row[colnumber]] = data['answerlocations'][row[colnumber]].toupper()
+    # squirrel away the clue locations; make sure any filled clues are uppercase
+    for row in range(height):
+      for col in range(width):
+        cellcontents = data['puzzle'][row][col]
+        if type(cellcontents) == int:
+          data['answerlocations'][cellcontents] = [row,col]
+        elif type(cellcontents) == str and cellcontents.isdigit():
+          data['answerlocations'][int(cellcontents)] = [row,col]
+          data['puzzle'][row][col] = int(cellcontents)
+        elif type(cellcontents) == str and cellcontents.isalpha():
+          data['puzzle'][row][col] = data['puzzle'][row][col].toupper()
+        elif type(cellcontents) == str and cellcontents == '#':
+          pass
+        elif isinstance(cellcontents, dict):
+          sys.exit("I don't know how to deal with fancy cells yet")
         else:
-          sys.exit('found a weird item at [{},{}] : {}'.format(rownumber,colnumber,repr(row[colnumber])))        
+          sys.exit("weird cell content: [{},{}] is {}".format(row,col,cellcontents))
 
     # now squirrel away the length of the answer for each clue
 
-      for direction in data['clues']:
-        if direction not in Puzzlestate.directions.keys():
-          sys.exit("{} is not a direction".format(direction))
-        for cluenumber in data['clues'][direction]:
-          print(repr(data['answerlocations']))
-          if cluenumber[0] in data['answerlocations']:
-            xloc,yloc = data['answerlocations'][cluenumber[0]]
-          else:
-            sys.exit('location {} seems to be missing from the puzzle'.format(cluenumber[0]))
-          # [1] is the clue for a human solver, we don't care about that
-          if data['puzzle'][xloc][yloc] != cluenumber[0]:
-            sys.exit('found a mismatch at ({},{}): expected {}, saw {}'.format(
-                                                                            xloc,
-                                                                            yloc,
-                                                                            cluenumber[0],
-                                                                            data['puzzle'][xloc][yloc]))
-        # now we count the number of blanks to the next '#' or boundary
+    for direction in data['clues']: 
+      if direction not in Puzzlestate.directions.keys():
+        sys.exit("{} is not a direction".format(direction))
+      for cluenumber in data['clues'][direction]:
+        xloc,yloc = data['answerlocations'][cluenumber[0]]
+        # [1] is the clue for a human solver, we don't care about that
+        if data['puzzle'][xloc][yloc] != cluenumber[0]:
+          sys.exit('found a mismatch at ({},{}): expected {}, saw {}'.format(
+                                                                        xloc,
+                                                                        yloc,
+                                                                        cluenumber[0],
+                                                                        data['puzzle'][xloc][yloc]))
+      # now we count the number of blanks from the start of the clue, in the given direction, 
+      # to the next '#' or boundary
         
-        data['answerlengths'][repr([ direction, cluenumber ])] = 1
-
-        while True:
-          xloc += Puzzlestate.directions[direction][0]
-          yloc += Puzzlestate.directions[direction][1]
-          if xloc == data['width'] or yloc == data['height'] or data['puzzle'][xloc][yloc] == '#':
-            break
-          data['answerlengths'][repr([ direction, cluenumber[0] ])] += 1
+      data['answerlengths'][repr([ direction, cluenumber[0] ])] = 1
+      while True:
+        xloc += Puzzlestate.directions[direction][0]
+        yloc += Puzzlestate.directions[direction][1]
+        if xloc == width or yloc == height or data['puzzle'][xloc][yloc] == '#':
+          break 
+        data['answerlengths'][repr([ direction, cluenumber[0] ])] += 1
 
     return cls(data)
 
@@ -173,16 +175,16 @@ class Puzzlestate:
     WIDTH_MM = CELLSIZE_MM*WIDTH+2*SIDE_MARGIN_MM
     HEIGHT_MM = CELLSIZE_MM*HEIGHT+2*TOP_MARGIN_MM
     BLACKBLOCK_COLOR = 'gray'
-    CSS_STYLES="""
-text.cluenumber {
-     font-size: 2pt;
-     font-family: Times New Roman;
-}
-text.solvedcell {
-     font-size: 8pt;
-     font-family: Arial;
-}
-"""
+#    CSS_STYLES="""
+#text.cluenumber {
+#     font-size: 2pt;
+#     font-family: Times New Roman;
+#}
+#text.solvedcell {
+#     font-size: 8pt;
+#     font-family: Arial;
+#}
+#"""
       
     if WIDTH_MM > HEIGHT_MM:
       PUZZLESIZE = ("{}mm".format(WIDTH_MM),"{}mm".format(WIDTH_MM))
@@ -191,7 +193,7 @@ text.solvedcell {
     
     drawing = svgwrite.Drawing(filename, size=PUZZLESIZE)
     drawing.viewbox(0, 0, HEIGHT_MM, WIDTH_MM)
-    drawing.defs.add(drawing.style(CSS_STYLES))
+#    drawing.defs.add(drawing.style(CSS_STYLES))
     
     # draw horizontal lines
     for i in range(HEIGHT):
@@ -227,25 +229,29 @@ text.solvedcell {
                            fill=BLACKBLOCK_COLOR))
   
     if showcluenumbers:
+      g = drawing.g(class_='cluenumber',style = "font-size:2px; font-family:Times New Roman")
       for row in range(HEIGHT):
         for col in range(WIDTH):
-          if self.getchar(row,col).isdigit():
-            drawing.add(drawing.group(drawing.text(self.getchar(row,col),
+          if type(self.getchar(row,col)) == int and self.getchar(row,col) > 0:
+            g.add(drawing.text(self.getchar(row,col),
                     insert=(
                             col*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_CLUENUM_X,
                             row*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_CLUENUM_Y,
-                           ))), class_='cluenumber')
+                           )))
+      drawing.add(g)
 
     if showsolvedcells:
+      g = drawing.g(class_='solvedcell', style = "font-size:8px; font-family:Arial")
       for row in range(HEIGHT):
         for col in range(WIDTH):
           c = self.data['solution'][row][col]
           if c.isalpha():
-            drawing.add(drawing.group(drawing.text(self.getchar(row,col),
+            g.add(drawing.text(self.getchar(row,col),
                     insert=(
                             col*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_SOLUTION_X,
                             row*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_SOLUTION_Y,
-                           ))),class_='solvedcell')
+                           )))
+      drawing.add(g)
 
 
     drawing.save()
