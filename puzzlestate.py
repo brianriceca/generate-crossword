@@ -81,12 +81,14 @@ class Puzzlestate:
 
     if 'puzzle' not in data:
       sys.exit('this puzzle file lacks a puzzle')
-    if not isinstance(data['puzzle'], dict):
+    if not isinstance(data['puzzle'], list):
       sys.exit('this puzzle file\'s puzzle is the wrong kind of data structure')
 
     if len(data['puzzle']) != height:
         sys.exit('puzzle should be {} columns high, is {}'.format(height,len(data['puzzle'])))
     for rownumber, row in enumerate(data['puzzle']):
+      if not isinstance(row, list):
+        sys.exit('this puzzle file\'s puzzle is the wrong kind of data structure')
       if len(row) != width:
         sys.exit('puzzle row {} should be {} wide, is {} wide'.format(rownumber,
                                                                       width,
@@ -105,7 +107,7 @@ class Puzzlestate:
         cellcontents = data['puzzle'][row][col]
         if cellcontents.isdigit():
           data['puzzle'][row][col] = int(cellcontents)
-          data['answerlocations'][cellcontents] = [row,col]
+          data['answerlocations'][int(cellcontents)] = [row,col]
         elif cellcontents.isalpha():
           data['puzzle'][row][col] = data['puzzle']['row']['col'].toupper()
 
@@ -375,7 +377,7 @@ text.solvedcell {
     return json.dumps(self.layout)
 
 def main():
-  p = Puzzlestate.fromjsonfile("puzzles/baby-animals-crossword.json")
+  p = Puzzlestate.fromjsonfile("puzzles/baby-animals-crossword.ipuz")
 
   p.writesvg("puzzles/baby-animals-crossword.svg")
 #  p.writejson("/tmp/foo.json")
