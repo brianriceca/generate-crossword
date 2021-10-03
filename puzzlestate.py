@@ -263,6 +263,8 @@ class Puzzlestate:
     return self.data["dimensions"]["width"]
 
   def getchar(self,rowno,colno):
+    if rowno > self.height() or colno > self.width():
+      sys.exit("puzzle is ({},{}), and getchar was called on ({},{})".format(rowno,colno,self.height(),self.width()))
     return self.data["puzzle"][rowno][colno]
 
   def setchar(self,rowno,colno,c):
@@ -290,14 +292,18 @@ class Puzzlestate:
       raise IndexError("row number " + str(rowno) + " too big")
     if colno >= self.width():
       raise IndexError("col number " + str(colno) + " too big")
-    if (self.getchar(rowno,colno) is None
-        or self.getchar(rowno,colno) == '?'
-        or self.getchar(rowno,colno) == '*'
-        or self.getchar(rowno,colno) == ' ' 
-        or self.getchar(rowno,colno) == '.' 
-        or int(self.getchar(rowno,colno)) > 0 ):
+    c2 = self.getchar(rowno,colno)
+    if c2 is None:
       return True # Yay!  It's not been filled in yet
-    if self.getchar(rowno,colno).upper() == c.upper():
+    if type(c2) == int:
+      return True # It's either a 0 for an empty space or else a clue number
+    if type(c2) == str and (
+        c2 == '?'
+        or c2 == '*'
+        or c2 == ' ' 
+        or c2 == '.') :
+      return True # Yay!  It's not been filled in yet
+    if type(c2) == str and c2.upper() == c.upper():
       return True # Yay! It's already the character we want.
     return False # D'oh! The space is already in use with a different letter
 
@@ -319,9 +325,14 @@ class Puzzlestate:
       xloc += xinc
       yloc += yinc
       length += 1
-      if self.getchar(xloc,yloc).isalpha():
-        constraints.append(list(length,self.puzzle[xloc][yloc]))
-      elif (self.getchar(xloc,yloc) == '#' or xloc == self.width() or yloc == self.height()):
+      if xloc == self.width() or yloc == self.height():
+        break
+      c = self.getchar(xloc,yloc)
+      if type(c) != str:
+        continue
+      if c.isalpha():
+        constraints.append([length,c])
+      elif c == '#':
         break
     return [direction, cluenumber, length, constraints]
 
@@ -340,12 +351,12 @@ class Puzzlestate:
     newp.data = copy.deepcopy(self.data)
     return newp
 
-  def inscribe_word(self,word,location,direction):
+  def inscribe_word(self,word,direction,cluenumber):
     # returns object containing the word if it was able to inscribe it, 
     # else throws an exception
 
     # first, a test
-    thisx,thisy = location
+    thisx,thisy = self.data['answerlocations'][cluenumber]
     xincrement,yincrement = Puzzlestate.directions[direction]
     for c in word:
       if ( thisx < 0 or thisx >= self.width()
@@ -359,8 +370,8 @@ class Puzzlestate:
       thisy = thisy + yincrement   
 
     # OK, it fits
-    thisx,thisy = location
-    xincrement,yincrement = direction
+    thisx,thisy = self.data['answerlocations'][cluenumber]
+   
     for c in word:
       self.setchar(thisx,thisy,c)
       thisx = thisx + xincrement   

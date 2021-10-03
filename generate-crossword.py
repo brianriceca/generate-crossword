@@ -18,31 +18,30 @@ def solve(p):
 
   #p.export_puzzlestate()
     
-  already_tried_words = list()
+  already_tried_words = set()
   while True:
     direction, cluenumber, wordlength, constraints = p.random_unsolved_clue()
     if direction is None:
       # puzzle is solved! no more unsolved clues
       return p
 
-    tryword = r.randomword(wordlength, 
-                           already_tried_words, 
-                           constraints,
-                           ababness) 
-    if tryword is None:
+    trywords = r.randomwords(wordlength, 
+                             already_tried_words, 
+                             constraints,
+                             ababness) 
+    if trywords is None:
       # Welp, no words in the dictionary fit that haven't been tried.
       return None
       
-    p2 = p.copy().inscribe_word(tryword, direction, cluenumber, cluelength)
-    # The inscribe_word method will crash if for some reason
-    # the word to be inscribed does not fit.
-    # The method also removes the inscribed clue from the list of unsolved 
-    # clues.
+    for tryword in trywords:
+      p2 = p.copy().inscribe_word(tryword, direction, cluenumber)
+      # The inscribe_word method will crash if for some reason
+      # the word to be inscribed does not fit.
 
-    already_tried_words.append(tryword)
+      already_tried_words.add(tryword)
 
-    if solve(p2):
-      break
+      if solve(p2):
+        break
 
   return p2
 
@@ -56,7 +55,7 @@ def main():
 #    sys.exit(1)
     pass
   if not infile:
-    infile = '/Users/brice/generate-crossword/puzzles/baby-animals-crossword.json'
+    infile = '/Users/brice/generate-crossword/puzzles/baby-animals-crossword.ipuz'
 
   p = Puzzlestate.fromjsonfile(infile)
 
