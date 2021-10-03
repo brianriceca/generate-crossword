@@ -29,9 +29,9 @@ class Randomword:
       f.close()
 
 
-  def randomwords(self, desired_length, already_tried_words, constraints, ababness):
+  def randomwords(self, desired_length, constraints, ababness):
 
-    candidates =  [ x for x in self.words_of_length_n[desired_length] if x not in already_tried_words ]
+    candidates =  [ x for x in self.words_of_length_n[desired_length] ]
 
     if constraints:
       matching_words = list()
@@ -44,7 +44,6 @@ class Randomword:
       return matching_words
     else:
       return candidates
-
 
 def main():
 

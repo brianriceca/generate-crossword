@@ -18,7 +18,6 @@ def solve(p):
 
   #p.export_puzzlestate()
     
-  already_tried_words = set()
   while True:
     direction, cluenumber, wordlength, constraints = p.random_unsolved_clue()
     if direction is None:
@@ -26,7 +25,6 @@ def solve(p):
       return p
 
     trywords = r.randomwords(wordlength, 
-                             already_tried_words, 
                              constraints,
                              ababness) 
     if trywords is None:
@@ -37,8 +35,6 @@ def solve(p):
       p2 = p.copy().inscribe_word(tryword, direction, cluenumber)
       # The inscribe_word method will crash if for some reason
       # the word to be inscribed does not fit.
-
-      already_tried_words.add(tryword)
 
       if solve(p2):
         break
