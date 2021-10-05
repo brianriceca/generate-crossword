@@ -24,9 +24,9 @@ def solve(p):
       # puzzle is solved! no more unsolved clues
       return p
 
-    trywords = r.randomwords(wordlength, 
+    trywords =  [ x for x in r.randomwords(wordlength, 
                              constraints,
-                             ababness) 
+                             ababness) if x not in p.data['wordsused'] ]
     if trywords is None:
       # Welp, no words in the dictionary fit that haven't been tried.
       return None

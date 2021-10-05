@@ -24,7 +24,7 @@ class Puzzlestate:
       return None
     return cls( {"dimensions": {"height": int(height), 
                                 "width": int(width)},
-                 "wordsused": [],
+                 "wordsused": set(),
                  "solution": 
                   [[None for i in range(width)] for j in range(height)] })
 
@@ -68,7 +68,7 @@ class Puzzlestate:
     height = int(data['dimensions']['height'])
 
     if 'wordsused' not in data.keys():
-        data['wordsused'] = list()
+        data['wordsused'] = set()
     if 'solution' not in data.keys():
         data['solution'] = \
                   [[None for i in range(width)] for j in range(height)] 
@@ -98,7 +98,7 @@ class Puzzlestate:
     for row in range(height):
       for col in range(width):
         cellcontents = data['puzzle'][row][col]
-        if type(cellcontents) == int:
+        if type(cellcontents) == int and cellcontents > 0:
           data['answerlocations'][cellcontents] = [row,col]
         elif type(cellcontents) == str and cellcontents.isdigit():
           data['answerlocations'][int(cellcontents)] = [row,col]
@@ -149,7 +149,7 @@ class Puzzlestate:
     
   def writesvg(self,filename,**kwargs):
     showcluenumbers=True
-    showsolvedcells=False
+    showsolvedcells=True
     if 'showcluenumbers' in kwargs:
       if isinstance(kwargs['showcluenumbers'], bool):
         showcluenumbers = kwargs['showcluenumbers']
@@ -170,8 +170,8 @@ class Puzzlestate:
     SIDE_MARGIN_MM = CELLSIZE_MM
     OFFSET_CLUENUM_X=1
     OFFSET_CLUENUM_Y=3
-    OFFSET_SOLUTION_X=6
-    OFFSET_SOLUTION_Y=9
+    OFFSET_SOLUTION_X=5
+    OFFSET_SOLUTION_Y=6
     WIDTH_MM = CELLSIZE_MM*WIDTH+2*SIDE_MARGIN_MM
     HEIGHT_MM = CELLSIZE_MM*HEIGHT+2*TOP_MARGIN_MM
     BLACKBLOCK_COLOR = 'gray'
@@ -230,10 +230,9 @@ class Puzzlestate:
   
     if showcluenumbers:
       g = drawing.g(class_='cluenumber',style = "font-size:2px; font-family:Times New Roman")
-      for row in range(HEIGHT):
-        for col in range(WIDTH):
-          if type(self.getchar(row,col)) == int and self.getchar(row,col) > 0:
-            g.add(drawing.text(self.getchar(row,col),
+      for answer in self.data['answerlocations'].keys():
+        row,col = self.data['answerlocations'][answer]
+        g.add(drawing.text(answer,
                     insert=(
                             col*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_CLUENUM_X,
                             row*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_CLUENUM_Y,
@@ -244,8 +243,8 @@ class Puzzlestate:
       g = drawing.g(class_='solvedcell', style = "font-size:8px; font-family:Arial")
       for row in range(HEIGHT):
         for col in range(WIDTH):
-          c = self.data['solution'][row][col]
-          if c.isalpha():
+          c = self.data['puzzle'][row][col]
+          if type(c) == str and c.isalpha():
             g.add(drawing.text(self.getchar(row,col),
                     insert=(
                             col*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_SOLUTION_X,
@@ -278,6 +277,7 @@ class Puzzlestate:
       raise IndexError("row number " + str(rowno) + " too big")
     if colno >= self.width():
       raise IndexError("col number " + str(colno) + " too big")
+    self.data["puzzle"][rowno][colno] = c.upper()
     self.data["solution"][rowno][colno] = c.upper()
     return self
 
@@ -343,7 +343,7 @@ class Puzzlestate:
       return None
 
   def addwordused(self,word):
-    self.data["wordsused"].append(word)
+    self.data["wordsused"].add(word)
     return self
 
   def copy(self):
@@ -379,6 +379,25 @@ class Puzzlestate:
     self.addwordused(word)
     return self
 
+  def is_puzzle_solved(self):
+    height = self.height()
+    width = self.width()
+    if len(self.data['puzzle']) != height:
+      sys.exit("height of puzzle doesn't match stored height")
+    if len(self.data['solution']) != height:
+      sys.exit("height of solution doesn't match stored height")
+    for i, row in enumerate(self.data['puzzle']):
+      if len(row) != width:
+        sys.exit("row {} of puzzle doesn't match width".format(i))
+      if len(self.data['solution']) != width:
+        sys.exit("row {} of solution doesn't match width".format(i))
+      for col in row:
+        if (self.data['solution'][row][col] is not None and
+            self.data['solution'][row][col] != ' ' and
+            self.data['solution'][row][col] != self.data['puzzle'][row][col]):
+          return False
+    return True
+
   def print(self):
     for rowno in range(self.height()):
       for colno in range(self.width()):
@@ -392,10 +411,15 @@ class Puzzlestate:
     return json.dumps(self.layout)
 
 def main():
-  p = Puzzlestate.fromjsonfile("puzzles/baby-animals-crossword.ipuz")
+  if len(sys.argv) == 1:
+    sourcefile = "puzzles/baby-animals-crossword.ipuz"
+  else:
+    sourcefile = sys.argv[1]
+  p = Puzzlestate.fromjsonfile(sys.argv[1])
+  print ("source file is {}".format(sourcefile))
 
-  p.writesvg("puzzles/baby-animals-crossword.svg")
-#  p.writejson("/tmp/foo.json")
+  p.writesvg("{}.svg".format(sourcefile))
+#  p.writejson("{}.ipuzout".format(sourcefile))
 
 if __name__ == '__main__':
     random.seed()
