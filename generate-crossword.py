@@ -13,11 +13,12 @@ from randomword import Randomword
 
 ababness = 1.0
 
-def solve(p):
+def solve(p,recursion_depth):
   r = Randomword(0)
 
   #p.export_puzzlestate()
     
+  attemptno = 0
   while True:
     direction, cluenumber, wordlength, constraints = p.random_unsolved_clue()
     if direction is None:
@@ -36,8 +37,9 @@ def solve(p):
       # The inscribe_word method will crash if for some reason
       # the word to be inscribed does not fit.
 
-      if solve(p2):
+      if solve(p2,recursion_depth+1):
         break
+      attemptno++
 
   return p2
 
@@ -55,7 +57,7 @@ def main():
 
   p = Puzzlestate.fromjsonfile(infile)
 
-  solve(p)
+  solve(p,0)
   p.print()
 
 if __name__ == "__main__":

@@ -100,6 +100,8 @@ class Puzzlestate:
         cellcontents = data['puzzle'][row][col]
         if type(cellcontents) == int and cellcontents > 0:
           data['answerlocations'][cellcontents] = [row,col]
+        elif type(cellcontents) == int:
+          pass
         elif type(cellcontents) == str and cellcontents.isdigit():
           data['answerlocations'][int(cellcontents)] = [row,col]
           data['puzzle'][row][col] = int(cellcontents)
@@ -150,6 +152,7 @@ class Puzzlestate:
   def writesvg(self,filename,**kwargs):
     showcluenumbers=True
     showsolvedcells=True
+    showtitle=True
     if 'showcluenumbers' in kwargs:
       if isinstance(kwargs['showcluenumbers'], bool):
         showcluenumbers = kwargs['showcluenumbers']
@@ -162,30 +165,45 @@ class Puzzlestate:
       else:
         sys.exit('writesvg keyword args need True or False')
 
+    if 'showtitle' in kwargs:
+      if isinstance(kwargs['showtitle'], bool):
+        showtitle = kwargs['showtitle']
+      else:
+        sys.exit('writesvg keyword args need True or False')
+
+    title = "My Crossword Puzzle"
+    if 'title' in self.data:
+      if isinstance(kwargs['title'], str):
+        title = self.data['title']
+      else:
+        sys.exit('titles need to be strings')
+
+    if 'title' in kwargs:
+      if isinstance(kwargs['title'], str):
+        title = kwargs['title']
+      else:
+        sys.exit('title keyword args need str')
 
     WIDTH=self.width()
     HEIGHT=self.height()
     CELLSIZE_MM=12
+    TITLEHEIGHT_MM = 14
     TOP_MARGIN_MM = CELLSIZE_MM
+    BOTTOM_MARGIN_MM = CELLSIZE_MM
+    if showtitle:
+      TOP_MARGIN_MM += TITLEHEIGHT_MM
     SIDE_MARGIN_MM = CELLSIZE_MM
     OFFSET_CLUENUM_X=1
     OFFSET_CLUENUM_Y=3
     OFFSET_SOLUTION_X=5
     OFFSET_SOLUTION_Y=6
     WIDTH_MM = CELLSIZE_MM*WIDTH+2*SIDE_MARGIN_MM
-    HEIGHT_MM = CELLSIZE_MM*HEIGHT+2*TOP_MARGIN_MM
+    HEIGHT_MM = CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM+BOTTOM_MARGIN_MM
     BLACKBLOCK_COLOR = 'gray'
-#    CSS_STYLES="""
-#text.cluenumber {
-#     font-size: 2pt;
-#     font-family: Times New Roman;
-#}
-#text.solvedcell {
-#     font-size: 8pt;
-#     font-family: Arial;
-#}
-#"""
-      
+    CLUENUMBER_STYLE = "font-size:2px; font-family:Times New Roman"
+    SOLUTION_STYLE = "font-size:8px; font-family:Arial"
+    TITLE_STYLE = "font-size:8px; font-family:Times New Roman"
+
     if WIDTH_MM > HEIGHT_MM:
       PUZZLESIZE = ("{}mm".format(WIDTH_MM),"{}mm".format(WIDTH_MM))
     else:
@@ -193,7 +211,6 @@ class Puzzlestate:
     
     drawing = svgwrite.Drawing(filename, size=PUZZLESIZE)
     drawing.viewbox(0, 0, HEIGHT_MM, WIDTH_MM)
-#    drawing.defs.add(drawing.style(CSS_STYLES))
     
     # draw horizontal lines
     for i in range(HEIGHT):
@@ -229,7 +246,7 @@ class Puzzlestate:
                            fill=BLACKBLOCK_COLOR))
   
     if showcluenumbers:
-      g = drawing.g(class_='cluenumber',style = "font-size:2px; font-family:Times New Roman")
+      g = drawing.g(class_='cluenumber',style = CLUENUMBER_STYLE)
       for answer in self.data['answerlocations'].keys():
         row,col = self.data['answerlocations'][answer]
         g.add(drawing.text(answer,
@@ -240,7 +257,7 @@ class Puzzlestate:
       drawing.add(g)
 
     if showsolvedcells:
-      g = drawing.g(class_='solvedcell', style = "font-size:8px; font-family:Arial")
+      g = drawing.g(class_='solvedcell', style = SOLUTION_STYLE)
       for row in range(HEIGHT):
         for col in range(WIDTH):
           c = self.data['puzzle'][row][col]
@@ -249,6 +266,15 @@ class Puzzlestate:
                     insert=(
                             col*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_SOLUTION_X,
                             row*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_SOLUTION_Y,
+                           )))
+      drawing.add(g)
+
+    if showtitle:
+      g = drawing.g(class_='title', style = TITLE_STYLE)
+      g.add(drawing.text(title,
+                    insert=(
+                            TITLEHEIGHT_MM+OFFSET_SOLUTION_X,
+                            SIDE_MARGIN_MM,
                            )))
       drawing.add(g)
 
@@ -415,10 +441,10 @@ def main():
     sourcefile = "puzzles/baby-animals-crossword.ipuz"
   else:
     sourcefile = sys.argv[1]
-  p = Puzzlestate.fromjsonfile(sys.argv[1])
+  p = Puzzlestate.fromjsonfile(sourcefile)
   print ("source file is {}".format(sourcefile))
 
-  p.writesvg("{}.svg".format(sourcefile))
+  p.writesvg("{}.svg".format(sourcefile), showtitle=True, title="I love Pants")
 #  p.writejson("{}.ipuzout".format(sourcefile))
 
 if __name__ == '__main__':
