@@ -141,151 +141,15 @@ class Puzzlestate:
 
     return cls(data)
 
-  def writejson(self,filename):
-    try:
-      with open(filename, 'w') as f:
-        json.dump(self.data, f, indent=2, sort_keys=True)
-    except OSError:
-      sys.exit('Could not write json to {}'.format(filename))
-    return self
-    
-  def writesvg(self,filename,**kwargs):
-    showcluenumbers=True
-    showsolvedcells=True
-    showtitle=True
-    if 'showcluenumbers' in kwargs:
-      if isinstance(kwargs['showcluenumbers'], bool):
-        showcluenumbers = kwargs['showcluenumbers']
-      else:
-        sys.exit('writesvg keyword args need True or False')
-
-    if 'showsolvedcells' in kwargs:
-      if isinstance(kwargs['showsolvedcells'], bool):
-        showsolvedcells = kwargs['showsolvedcells']
-      else:
-        sys.exit('writesvg keyword args need True or False')
-
-    if 'showtitle' in kwargs:
-      if isinstance(kwargs['showtitle'], bool):
-        showtitle = kwargs['showtitle']
-      else:
-        sys.exit('writesvg keyword args need True or False')
-
-    title = "My Crossword Puzzle"
-    if 'title' in self.data:
-      if isinstance(kwargs['title'], str):
-        title = self.data['title']
-      else:
-        sys.exit('titles need to be strings')
-
-    if 'title' in kwargs:
-      if isinstance(kwargs['title'], str):
-        title = kwargs['title']
-      else:
-        sys.exit('title keyword args need str')
-
-    WIDTH=self.width()
-    HEIGHT=self.height()
-    CELLSIZE_MM=12
-    TITLEHEIGHT_MM = 14
-    TOP_MARGIN_MM = CELLSIZE_MM
-    BOTTOM_MARGIN_MM = CELLSIZE_MM
-    if showtitle:
-      TOP_MARGIN_MM += TITLEHEIGHT_MM
-    SIDE_MARGIN_MM = CELLSIZE_MM
-    OFFSET_CLUENUM_X=1
-    OFFSET_CLUENUM_Y=3
-    OFFSET_SOLUTION_X=5
-    OFFSET_SOLUTION_Y=6
-    WIDTH_MM = CELLSIZE_MM*WIDTH+2*SIDE_MARGIN_MM
-    HEIGHT_MM = CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM+BOTTOM_MARGIN_MM
-    BLACKBLOCK_COLOR = 'gray'
-    CLUENUMBER_STYLE = "font-size:2px; font-family:Times New Roman"
-    SOLUTION_STYLE = "font-size:8px; font-family:Arial"
-    TITLE_STYLE = "font-size:8px; font-family:Times New Roman"
-
-    if WIDTH_MM > HEIGHT_MM:
-      PUZZLESIZE = ("{}mm".format(WIDTH_MM),"{}mm".format(WIDTH_MM))
-    else:
-      PUZZLESIZE = ("{}mm".format(HEIGHT_MM),"{}mm".format(HEIGHT_MM))
-    
-    drawing = svgwrite.Drawing(filename, size=PUZZLESIZE)
-    drawing.viewbox(0, 0, HEIGHT_MM, WIDTH_MM)
-    
-    # draw horizontal lines
-    for i in range(HEIGHT):
-      y = TOP_MARGIN_MM + i * CELLSIZE_MM
-#      print("horizontal line from ({},{}) to ({},{})".format(SIDE_MARGIN_MM, y, CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y))
-      drawing.add(drawing.line(start=(SIDE_MARGIN_MM, y), end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y),
-                 stroke=BLACKBLOCK_COLOR,stroke_width=1))
-    drawing.add(drawing.line(start=(SIDE_MARGIN_MM-1, 
-                            TOP_MARGIN_MM+HEIGHT*CELLSIZE_MM),
-                     end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM+1, 
-                          TOP_MARGIN_MM+HEIGHT*CELLSIZE_MM),
-                  stroke='#00FF00',stroke_width=1))
-    drawing.add(drawing.line(start=(SIDE_MARGIN_MM-1, TOP_MARGIN_MM), 
-                     end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM+1, TOP_MARGIN_MM),
-                  stroke='#FFFF00',stroke_width=1))
-    
-    # draw vertical lines
-    for i in range(WIDTH+1):
-      x = SIDE_MARGIN_MM + i * CELLSIZE_MM
-#      print("vertical line from ({},{}) to ({},{})".format(x,TOP_MARGIN_MM, x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM))
-      drawing.add(drawing.line(start=(x,TOP_MARGIN_MM), end=(x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
-                  stroke=BLACKBLOCK_COLOR,stroke_width=1))
-        
-    # insert black boxes
-    for row in range(HEIGHT):
-      for col in range(WIDTH):
-        if self.getchar(row,col) == '#':
-          drawing.add(drawing.rect(insert=(
-                                   col*CELLSIZE_MM+TOP_MARGIN_MM,
-                                   row*CELLSIZE_MM+SIDE_MARGIN_MM
-                                  ),
-                           size=(CELLSIZE_MM,CELLSIZE_MM),
-                           fill=BLACKBLOCK_COLOR))
-  
-    if showcluenumbers:
-      g = drawing.g(class_='cluenumber',style = CLUENUMBER_STYLE)
-      for answer in self.data['answerlocations'].keys():
-        row,col = self.data['answerlocations'][answer]
-        g.add(drawing.text(answer,
-                    insert=(
-                            col*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_CLUENUM_X,
-                            row*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_CLUENUM_Y,
-                           )))
-      drawing.add(g)
-
-    if showsolvedcells:
-      g = drawing.g(class_='solvedcell', style = SOLUTION_STYLE)
-      for row in range(HEIGHT):
-        for col in range(WIDTH):
-          c = self.data['puzzle'][row][col]
-          if type(c) == str and c.isalpha():
-            g.add(drawing.text(self.getchar(row,col),
-                    insert=(
-                            col*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_SOLUTION_X,
-                            row*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_SOLUTION_Y,
-                           )))
-      drawing.add(g)
-
-    if showtitle:
-      g = drawing.g(class_='title', style = TITLE_STYLE)
-      g.add(drawing.text(title,
-                    insert=(
-                            TITLEHEIGHT_MM+OFFSET_SOLUTION_X,
-                            SIDE_MARGIN_MM,
-                           )))
-      drawing.add(g)
-
-
-    drawing.save()
-      
   def height(self):
     return self.data["dimensions"]["height"]
+  def getheight(self):
+    return self.height()
 
   def width(self):
     return self.data["dimensions"]["width"]
+  def getwidth(self):
+    return self.width()
 
   def getchar(self,rowno,colno):
     if rowno > self.height() or colno > self.width():
@@ -333,6 +197,171 @@ class Puzzlestate:
       return True # Yay! It's already the character we want.
     return False # D'oh! The space is already in use with a different letter
 
+  def gettitle(self):
+    if 'title' in self.data:
+      if isinstance(self.data['title'], str):
+        return self.data['title']
+    return None
+
+  def settitle(self,newtitle):
+    if isinstance(newtitle, str):
+      self.data['title'] = newtitle
+    else:
+      sys.exit('settitle called with something not a string')
+    return self
+
+  def writejson(self,filename):
+    try:
+      with open(filename, 'w') as f:
+        json.dump(self.data, f, indent=2, sort_keys=True)
+    except OSError:
+      sys.exit('Could not write json to {}'.format(filename))
+    return self
+    
+  def writesvg(self,filename,**kwargs):
+    showcluenumbers=True
+    showsolvedcells=True
+    showtitle=True
+    if 'showcluenumbers' in kwargs:
+      if isinstance(kwargs['showcluenumbers'], bool):
+        showcluenumbers = kwargs['showcluenumbers']
+      else:
+        sys.exit('writesvg keyword args need True or False')
+
+    if 'showsolvedcells' in kwargs:
+      if isinstance(kwargs['showsolvedcells'], bool):
+        showsolvedcells = kwargs['showsolvedcells']
+      else:
+        sys.exit('writesvg keyword args need True or False')
+
+    if 'showtitle' in kwargs:
+      if isinstance(kwargs['showtitle'], bool):
+        showtitle = kwargs['showtitle']
+      else:
+        sys.exit('writesvg keyword args need True or False')
+
+    title = self.gettitle()
+    if title is None or title == '':
+      title = 'Untitled Crossword Puzzle'
+
+    if 'title' in kwargs:
+      if isinstance(kwargs['title'], str):
+        title = kwargs['title']
+      else:
+        sys.exit('titles need to be strings')
+
+    WIDTH=self.width()
+    HEIGHT=self.height()
+    CELLSIZE_MM=12
+    if showtitle:
+      TITLEHEIGHT_MM = 14
+    else:
+      TITLEHEIGHT_MM = 0
+    TOP_MARGIN_MM = CELLSIZE_MM
+    BOTTOM_MARGIN_MM = CELLSIZE_MM
+    TOP_MARGIN_MM += TITLEHEIGHT_MM
+    SIDE_MARGIN_MM = CELLSIZE_MM
+    OFFSET_CLUENUM_X=1
+    OFFSET_CLUENUM_Y=3
+    OFFSET_SOLUTION_X=5
+    OFFSET_SOLUTION_Y=6
+    WIDTH_MM = CELLSIZE_MM*WIDTH+2*SIDE_MARGIN_MM
+    HEIGHT_MM = CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM+BOTTOM_MARGIN_MM
+    BLOCK_COLOR = 'gray'
+    LINE_COLOR = 'gray'
+    CLUENUMBER_STYLE = "font-size:2px; font-family:Times New Roman"
+    SOLUTION_STYLE = "font-size:8px; font-family:Arial"
+    TITLE_STYLE = "font-size:8px; font-family:Times New Roman"
+
+    PUZZLESIZE = ("{}mm".format(WIDTH_MM),"{}mm".format(HEIGHT_MM))
+    
+    drawing = svgwrite.Drawing(filename, size=PUZZLESIZE)
+    drawing.viewbox(0, 0, HEIGHT_MM, WIDTH_MM)
+    
+    # draw horizontal lines
+    for i in range(1,HEIGHT):
+      y = TOP_MARGIN_MM + i * CELLSIZE_MM
+#      print("horizontal line from ({},{}) to ({},{})".format(SIDE_MARGIN_MM, y, CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y))
+      drawing.add(drawing.line(start=(SIDE_MARGIN_MM, y), end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y),
+                 stroke=LINE_COLOR,stroke_width=1))
+    drawing.add(drawing.line(start=(SIDE_MARGIN_MM, 
+                            TOP_MARGIN_MM+HEIGHT*CELLSIZE_MM),
+                     end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, 
+                          TOP_MARGIN_MM+HEIGHT*CELLSIZE_MM),
+                  stroke=LINE_COLOR,stroke_width=1, style='stroke-linecap: round;'))
+    drawing.add(drawing.line(start=(SIDE_MARGIN_MM, TOP_MARGIN_MM), 
+                     end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, TOP_MARGIN_MM),
+                  stroke=LINE_COLOR,stroke_width=1, style='stroke-linecap: round;'))
+    
+    # draw vertical lines
+    for i in range(1,WIDTH):
+      x = SIDE_MARGIN_MM + i * CELLSIZE_MM
+#      print("vertical line from ({},{}) to ({},{})".format(x,TOP_MARGIN_MM, x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM))
+      drawing.add(drawing.line(start=(x,TOP_MARGIN_MM), end=(x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
+                  stroke=LINE_COLOR,stroke_width=1))
+    drawing.add(drawing.line(start=(SIDE_MARGIN_MM,TOP_MARGIN_MM), end=(SIDE_MARGIN_MM, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
+                stroke=LINE_COLOR,stroke_width=1,style='stroke-linecap: round;'))
+    drawing.add(drawing.line(start=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM,TOP_MARGIN_MM), end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
+                stroke=LINE_COLOR,stroke_width=1,style='stroke-linecap: round;'))
+
+
+        
+    # insert black boxes
+    for row in range(HEIGHT):
+      for col in range(WIDTH):
+        if self.getchar(row,col) == '#':
+#          print("drawing a box at x={}, y={}".format(
+#                                   col*CELLSIZE_MM+SIDE_MARGIN_MM,
+#                                   row*CELLSIZE_MM+TOP_MARGIN_MM
+#                                  ))
+          drawing.add(drawing.rect(insert=(
+                                   col*CELLSIZE_MM+SIDE_MARGIN_MM,
+                                   row*CELLSIZE_MM+TOP_MARGIN_MM
+                                  ),
+                           size=(CELLSIZE_MM,CELLSIZE_MM),
+                           fill=BLOCK_COLOR))
+  
+    if showcluenumbers:
+      g = drawing.g(class_='cluenumber',style = CLUENUMBER_STYLE)
+      for answer in self.data['answerlocations'].keys():
+        row,col = self.data['answerlocations'][answer]
+#        print("writing a clue number at x={}, y={}".format(
+#                            col*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_CLUENUM_X,
+#                            row*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_CLUENUM_Y,
+#                           ))
+
+        g.add(drawing.text(answer,
+                    insert=(
+                            col*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_CLUENUM_X,
+                            row*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_CLUENUM_Y,
+                           )))
+      drawing.add(g)
+
+    if showsolvedcells:
+      g = drawing.g(class_='solvedcell', style = SOLUTION_STYLE)
+      for row in range(HEIGHT):
+        for col in range(WIDTH):
+          c = self.data['puzzle'][row][col]
+          if type(c) == str and c.isalpha():
+            g.add(drawing.text(self.getchar(row,col),
+                    insert=(
+                            col*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_SOLUTION_X,
+                            row*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_SOLUTION_Y,
+                           )))
+      drawing.add(g)
+
+    if showtitle:
+      g = drawing.g(class_='title', style = TITLE_STYLE)
+      g.add(drawing.text(title,
+                    insert=(
+                            SIDE_MARGIN_MM,
+                            TITLEHEIGHT_MM
+                           )))
+      drawing.add(g)
+
+
+    drawing.save()
+      
   def random_unsolved_clue(self):
     direction, cluenumber, length = self.data['unsolved'][random.randint(0,
 
@@ -444,7 +473,7 @@ def main():
   p = Puzzlestate.fromjsonfile(sourcefile)
   print ("source file is {}".format(sourcefile))
 
-  p.writesvg("{}.svg".format(sourcefile), showtitle=True, title="I love Pants")
+  p.writesvg("{}.svg".format(sourcefile), showtitle=True)
 #  p.writejson("{}.ipuzout".format(sourcefile))
 
 if __name__ == '__main__':
