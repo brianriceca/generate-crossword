@@ -17,6 +17,8 @@ def solve(p,recursion_depth):
   r = Randomword(0)
 
   #p.export_puzzlestate()
+
+  p2 = None
     
   attemptno = 0
   while True:
@@ -34,16 +36,20 @@ def solve(p,recursion_depth):
       
     for tryword in trywords:
       p2 = p.copy().inscribe_word(tryword, direction, cluenumber)
-      # The inscribe_word method will crash if for some reason
+      # The inscribe_word method will return None if for some reason
       # the word to be inscribed does not fit.
 
+      if p2 is None:
+        continue
+
+      p2.settitle('Depth {} Attempt {}'.format(recursion_depth,attemptno))
+      p2.writesvg('/home/brice/generate-crossword/out-{}-{}.svg'.format(recursion_depth,attemptno))
       if solve(p2,recursion_depth+1):
         break
-      attemptno++
+      attemptno += 1
 
   return p2
 
-    
 def main():
   infile = ''
   if len(sys.argv) == 2:

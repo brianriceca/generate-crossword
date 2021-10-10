@@ -263,8 +263,8 @@ class Puzzlestate:
     SIDE_MARGIN_MM = CELLSIZE_MM
     OFFSET_CLUENUM_X=1
     OFFSET_CLUENUM_Y=3
-    OFFSET_SOLUTION_X=5
-    OFFSET_SOLUTION_Y=6
+    OFFSET_SOLUTION_X=4
+    OFFSET_SOLUTION_Y=9
     WIDTH_MM = CELLSIZE_MM*WIDTH+2*SIDE_MARGIN_MM
     HEIGHT_MM = CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM+BOTTOM_MARGIN_MM
     BLOCK_COLOR = 'gray'
@@ -408,19 +408,20 @@ class Puzzlestate:
 
   def inscribe_word(self,word,direction,cluenumber):
     # returns object containing the word if it was able to inscribe it, 
-    # else throws an exception
+    # else returns none
+
+    xincrement,yincrement = Puzzlestate.directions[direction]
 
     # first, a test
     thisx,thisy = self.data['answerlocations'][cluenumber]
-    xincrement,yincrement = Puzzlestate.directions[direction]
     for c in word:
       if ( thisx < 0 or thisx >= self.width()
            or thisy < 0 or thisy >= self.height() ):
-        raise ValueError('out of bounds')
+        return None
       if self.testchar(thisx,thisy,c):
         pass 
       else:
-        raise ValueError('conflict with already inscribed word')
+        return None
       thisx = thisx + xincrement   
       thisy = thisy + yincrement   
 
