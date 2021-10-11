@@ -12,8 +12,11 @@ from puzzlestate import Puzzlestate
 from randomword import Randomword
 
 ababness = 1.0
+itercount = 0
 
 def solve(p,recursion_depth):
+  global itercount
+
   r = Randomword(0)
 
   #p.export_puzzlestate()
@@ -21,32 +24,42 @@ def solve(p,recursion_depth):
   p2 = None
     
   attemptno = 0
-  while True:
-    direction, cluenumber, wordlength, constraints = p.random_unsolved_clue()
-    if direction is None:
-      # puzzle is solved! no more unsolved clues
-      return p
+  thisclue = p.random_unsolved_clue()
+  if thisclue is None:
+    # puzzle is solved! no more unsolved clues
+    return p
+  direction, cluenumber, wordlength, constraints = thisclue
 
-    trywords =  [ x for x in r.randomwords(wordlength, 
+  print(' ' * recursion_depth, "Trying to solve {} {}".format(cluenumber,direction))
+
+  trywords =  [ x for x in r.randomwords(wordlength, 
                              constraints,
                              ababness) if x not in p.data['wordsused'] ]
-    if trywords is None:
-      # Welp, no words in the dictionary fit that haven't been tried.
-      return None
+  if trywords is None:
+    # Welp, no words in the dictionary fit that haven't been tried.
+    print(' ' * recursion_depth, "Dang, nothing fits {} {}".format(cluenumber,direction))
+    return None
       
-    for tryword in trywords:
-      p2 = p.copy().inscribe_word(tryword, direction, cluenumber)
-      # The inscribe_word method will return None if for some reason
-      # the word to be inscribed does not fit.
+  for tryword in trywords:
+    itercount += 1
+    attemptno += 1 
+    p2 = p.copy().inscribe_word(tryword, direction, cluenumber)
 
-      if p2 is None:
-        continue
+    if p2 is None:
+      print(' ' * recursion_depth, "I tried {} in {} {}, but it doesn't fit".format(tryword,cluenumber,direction))
+      continue
 
-      p2.settitle('Depth {} Attempt {}'.format(recursion_depth,attemptno))
-      p2.writesvg('/home/brice/generate-crossword/out-{}-{}.svg'.format(recursion_depth,attemptno))
-      if solve(p2,recursion_depth+1):
-        break
-      attemptno += 1
+#    p2.settitle('Count {} Depth {} Attempt {}'.format(itercount,recursion_depth,attemptno))
+    print(' ' * recursion_depth, "{} seems to work in {} {}!".format(tryword,cluenumber,direction))
+    p3 = solve(p2,recursion_depth+1)
+    if p3 is None:
+      print(' ' * recursion_depth, "Well that didn't work")
+      continue
+    print(' ' * recursion_depth, "The recursive call came back happy!")
+    return p3
+  else: 
+    print(' ' * recursion_depth, "I tried all my word choices and none of them worked")
+    return None
 
   return p2
 
@@ -63,8 +76,9 @@ def main():
 
   p = Puzzlestate.fromjsonfile(infile)
 
-  solve(p,0)
-  p.print()
+  p2 = solve(p,0)
+  p2.print()
+  p2.writesvg('solution.svg',showtitle=True,showcluenumbers=True,showsolvedcells=True)
 
 if __name__ == "__main__":
     main()

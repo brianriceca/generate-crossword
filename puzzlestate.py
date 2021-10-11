@@ -154,7 +154,10 @@ class Puzzlestate:
   def getchar(self,rowno,colno):
     if rowno > self.height() or colno > self.width():
       sys.exit("puzzle is ({},{}), and getchar was called on ({},{})".format(rowno,colno,self.height(),self.width()))
+    if self.data["solution"][rowno][colno] is not None:
+      return self.data["solution"][rowno][colno]
     return self.data["puzzle"][rowno][colno]
+    
 
   def setchar(self,rowno,colno,c):
     rowno = int(rowno)
@@ -167,7 +170,6 @@ class Puzzlestate:
       raise IndexError("row number " + str(rowno) + " too big")
     if colno >= self.width():
       raise IndexError("col number " + str(colno) + " too big")
-    self.data["puzzle"][rowno][colno] = c.upper()
     self.data["solution"][rowno][colno] = c.upper()
     return self
 
@@ -341,7 +343,7 @@ class Puzzlestate:
       g = drawing.g(class_='solvedcell', style = SOLUTION_STYLE)
       for row in range(HEIGHT):
         for col in range(WIDTH):
-          c = self.data['puzzle'][row][col]
+          c = self.getchar(row,col)
           if type(c) == str and c.isalpha():
             g.add(drawing.text(self.getchar(row,col),
                     insert=(
@@ -363,9 +365,10 @@ class Puzzlestate:
     drawing.save()
       
   def random_unsolved_clue(self):
-    direction, cluenumber, length = self.data['unsolved'][random.randint(0,
-
-                                                            len(self.data['unsolved'])-1)]
+    if len(self.data['unsolved']) == 0:
+      return None
+    thisclue = random.choice(self.data['unsolved'])
+    direction, cluenumber, length = thisclue
     if direction not in Puzzlestate.directions.keys():
       sys.exit('{} is not a direction'.format(direction))
     xinc, yinc = Puzzlestate.directions[direction]
@@ -389,6 +392,8 @@ class Puzzlestate:
         constraints.append([length,c])
       elif c == '#':
         break
+    
+    self.data['unsolved'].remove(thisclue)
     return [direction, cluenumber, length, constraints]
 
   def getwordsused(self):
@@ -458,11 +463,16 @@ class Puzzlestate:
     for rowno in range(self.height()):
       for colno in range(self.width()):
         c = self.getchar(rowno,colno)
-        if c:
-          print("{0:s} ".format(c), end='')
+        if c is None or c == '':
+          print('0 ', end='')
+        elif type(c) == str:
+          print(c, ' ', end='')
+        elif type(c) == int:
+          print(c, "?", end='')
         else:
-          print('* ', end='')
+          print("¿ ", end='')
       print()
+
   def json(self):
     return json.dumps(self.layout)
 
