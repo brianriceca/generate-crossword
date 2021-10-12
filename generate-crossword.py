@@ -32,12 +32,18 @@ def solve(p,recursion_depth):
 
   print(' ' * recursion_depth, "Trying to solve {} {}".format(cluenumber,direction))
 
-  trywords =  [ x for x in r.randomwords(wordlength, 
+  trywords = r.randomwords(wordlength, 
                              constraints,
-                             ababness) if x not in p.data['wordsused'] ]
+                             ababness, 'english1020' )
+  if trywords is None:
+    # Welp, no words in the dictionary fit
+    print(' ' * recursion_depth, "Dang, nothing fits {} {}".format(cluenumber,direction))
+    return None  
+    
+  trywords =  [ x for x in trywords if x not in p.data['wordsused'] ]
   if trywords is None:
     # Welp, no words in the dictionary fit that haven't been tried.
-    print(' ' * recursion_depth, "Dang, nothing fits {} {}".format(cluenumber,direction))
+    print(' ' * recursion_depth, "Dang, nothing new fits {} {}".format(cluenumber,direction))
     return None
       
   for tryword in trywords:
