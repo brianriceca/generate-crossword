@@ -480,6 +480,14 @@ class Puzzlestate:
   def json(self):
     return json.dumps(self.layout)
 
+  def sparseness(self):
+    size = self.height() * self.width()
+    black_squares = sum ( [ sum ([ 1 for col in row if col == '#' ]) for row in self.data['puzzle'] ] )
+    if size == 0:
+      sys.exit("puzzle is size zero?")
+    return black_squares / size
+    
+
 def main():
   if len(sys.argv) == 1:
     sourcefile = "puzzles/baby-animals-crossword.ipuz"
@@ -487,6 +495,7 @@ def main():
     sourcefile = sys.argv[1]
   p = Puzzlestate.fromjsonfile(sourcefile)
   print ("source file is {}".format(sourcefile))
+  print ("sparseness is {}".format(p.sparseness()))
 
   p.writesvg("{}.svg".format(sourcefile), showtitle=True)
 #  p.writejson("{}.ipuzout".format(sourcefile))
