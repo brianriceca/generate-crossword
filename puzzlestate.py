@@ -371,27 +371,28 @@ class Puzzlestate:
     direction, cluenumber, length = thisclue
     if direction not in Puzzlestate.directions.keys():
       sys.exit('{} is not a direction'.format(direction))
-    xinc, yinc = Puzzlestate.directions[direction]
+    row_increment, col_increment = Puzzlestate.directions[direction]
   
     # now we gather the constraints, i.e., letters already filled in
 
     constraints = list()
-    xloc,yloc = self.data['answerlocations'][cluenumber]
+    row,col = self.data['answerlocations'][cluenumber]
+    if col >= self.width() or row >= self.height():
+      sys.exit('answer location for {} {} is corrupt'.format(cluenumber,direction))
 
     length = 0
     while True:
-      xloc += xinc
-      yloc += yinc
-      length += 1
-      if xloc == self.width() or yloc == self.height():
+      if col == self.width() or row == self.height(): 
+        # remember, rows and cols are numbered from zero
         break
-      c = self.getchar(xloc,yloc)
-      if type(c) != str:
-        continue
-      if c.isalpha():
+      c = self.getchar(row,col)
+      if type(c) == str and c.isalpha():
         constraints.append([length,c])
-      elif c == '#':
+      if type(c) == str and c == '#':
         break
+      row += row_increment
+      col += col_increment
+      length += 1
     
     self.data['unsolved'].remove(thisclue)
     return [direction, cluenumber, length, constraints]
@@ -415,28 +416,31 @@ class Puzzlestate:
     # returns object containing the word if it was able to inscribe it, 
     # else returns none
 
-    xincrement,yincrement = Puzzlestate.directions[direction]
+    row_increment,col_increment = Puzzlestate.directions[direction]
 
     # first, a test
-    thisx,thisy = self.data['answerlocations'][cluenumber]
+    row,col = self.data['answerlocations'][cluenumber]
     for c in word:
-      if ( thisx < 0 or thisx >= self.width()
-           or thisy < 0 or thisy >= self.height() ):
-        return None
-      if self.testchar(thisx,thisy,c):
+      if row < 0 or col < 0:
+        sys.exit('no negative indices thank you')
+      if col >= self.width():
+        sys.exit('tried to access col={} in a puzzle of width {}'.format(col,self.width()))
+      if row >= self.height():
+        sys.exit('tried to access row={} in a puzzle of height {}'.format(row,self.height()))
+      if self.testchar(row,col,c):
         pass 
       else:
-        return None
-      thisx = thisx + xincrement   
-      thisy = thisy + yincrement   
+        sys.exit('hey whoa, {} was supposed to fit at ({},{})'.format(c,row,col))
+      row += row_increment   
+      col += col_increment   
 
     # OK, it fits
-    thisx,thisy = self.data['answerlocations'][cluenumber]
-   
+    row,col = self.data['answerlocations'][cluenumber]
     for c in word:
-      self.setchar(thisx,thisy,c)
-      thisx = thisx + xincrement   
-      thisy = thisy + yincrement   
+      self.setchar(row,col,c)
+      row += row_increment   
+      col += col_increment   
+
     self.addwordused(word)
     return self
 

@@ -30,7 +30,10 @@ def solve(p,recursion_depth):
     return p
   direction, cluenumber, wordlength, constraints = thisclue
 
-  print(' ' * recursion_depth, "Trying to solve {} {}".format(cluenumber,direction))
+  if constraints:
+    print(' ' * recursion_depth, "Trying to solve {} {} with {}".format(cluenumber,direction,repr(constraints)))
+  else:
+    print(' ' * recursion_depth, "Trying to solve {} {}".format(cluenumber,direction))
 
   trywords = r.randomwords(wordlength, 
                              constraints,
