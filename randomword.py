@@ -43,7 +43,7 @@ class Randomword:
   def randomwords(self, desired_length, constraints, category):
 
     if category not in self.words:
-      sys.exit('unknown category {}'.category)
+      raise RuntimeError('unknown category {}'.category)
   
     pattern = list('.' * desired_length)
     if constraints:

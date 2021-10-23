@@ -28,6 +28,8 @@ class Puzzlestate:
     terminals = { 'S', 'D', 'G' }
     u = { 'U' }
     h = { 'H' }
+    hpreceders = { 'C', 'G', 'S', 'T' }
+    hfollowers = { *vowels, 'R' }
 
   def __init__(self,data):
     self.data = data
@@ -49,34 +51,34 @@ class Puzzlestate:
       with open(filename) as f:
         data = json.load(f)
     except OSError:
-      sys.exit('Could not read json from {}'.format(filename))
+      raise RuntimeError('Could not read json from {}'.format(filename))
     
     if ('dimensions' not in data.keys() or 
         'width' not in data['dimensions'].keys() or
         'height' not in data['dimensions'].keys()):
-      sys.exit('File {} missing puzzle dimension'.format(filename))
+      raise RuntimeError('File {} missing puzzle dimension'.format(filename))
     
     if type(data['dimensions']['width']) == float:
-      sys.exit('silly rabbit, widths can\'t be floats')
+      raise RuntimeError('silly rabbit, widths can\'t be floats')
     elif type(data['dimensions']['width']) == str:
       if data['dimensions']['width'].isnumeric():
         data['dimensions']['width'] = int(data['dimensions']['width'])
       else:
-        sys.exit('invalid width')
+        raise RuntimeError('invalid width')
 
     if data['dimensions']['width'] <= 0:
-      sys.exit('width must be positive')
+      raise RuntimeError('width must be positive')
 
     if type(data['dimensions']['height']) == float:
-      sys.exit('silly rabbit, heights can\'t be float')
+      raise RuntimeError('silly rabbit, heights can\'t be float')
     elif type(data['dimensions']['height']) == str:
       if data['dimensions']['height'].isnumeric():
         data['dimensions']['height'] = int(data['dimensions']['height'])
       else:
-        sys.exit('invalid height')
+        raise RuntimeError('invalid height')
 
     if data['dimensions']['height'] <= 0:
-      sys.exit('height must be positive')
+      raise RuntimeError('height must be positive')
 
     width = int(data['dimensions']['width'])
     height = int(data['dimensions']['height'])
@@ -94,18 +96,18 @@ class Puzzlestate:
     # let's validate the puzzle and die if it is broken
 
     if 'puzzle' not in data:
-      sys.exit('this puzzle file lacks a puzzle')
+      raise RuntimeError('this puzzle file lacks a puzzle')
     if not isinstance(data['puzzle'], list):
-      sys.exit('this puzzle file\'s puzzle is the wrong kind of data structure')
+      raise RuntimeError('this puzzle file\'s puzzle is the wrong kind of data structure')
 
     if len(data['puzzle']) != height:
-      sys.exit('puzzle should be {} columns high, is {}'.format(height,len(data['puzzle'])))
+      raise RuntimeError('puzzle should be {} columns high, is {}'.format(height,len(data['puzzle'])))
 
     for rownumber, row in enumerate(data['puzzle']):
       if not isinstance(row, list):
-        sys.exit('this puzzle file\'s puzzle is the wrong kind of data structure')
+        raise RuntimeError('this puzzle file\'s puzzle is the wrong kind of data structure')
       if len(row) != width:
-        sys.exit('puzzle row {} should be {} wide, is {} wide'.format(rownumber,
+        raise RuntimeError('puzzle row {} should be {} wide, is {} wide'.format(rownumber,
                                                                       width,
                                                                       len(row)))
     # squirrel away the clue locations; make sure any filled clues are uppercase
@@ -124,20 +126,20 @@ class Puzzlestate:
         elif type(cellcontents) == str and cellcontents == '#':
           pass
         elif isinstance(cellcontents, dict):
-          sys.exit("I don't know how to deal with fancy cells yet")
+          raise RuntimeError("I don't know how to deal with fancy cells yet")
         else:
-          sys.exit("weird cell content: [{},{}] is {}".format(row,col,cellcontents))
+          raise RuntimeError("weird cell content: [{},{}] is {}".format(row,col,cellcontents))
 
     # now squirrel away the length of the answer for each clue
 
     for direction in data['clues']: 
       if direction not in Puzzlestate.directions.keys():
-        sys.exit("{} is not a direction".format(direction))
+        raise RuntimeError("{} is not a direction".format(direction))
       for cluenumber in data['clues'][direction]:
         xloc,yloc = data['answerlocations'][cluenumber[0]]
         # [1] is the clue for a human solver, we don't care about that
         if data['puzzle'][xloc][yloc] != cluenumber[0]:
-          sys.exit('found a mismatch at ({},{}): expected {}, saw {}'.format(
+          raise RuntimeError('found a mismatch at ({},{}): expected {}, saw {}'.format(
                                                                         xloc,
                                                                         yloc,
                                                                         cluenumber[0],
@@ -172,7 +174,7 @@ class Puzzlestate:
 
   def getchar(self,rowno,colno):
     if rowno >= self.height() or colno >= self.width():
-      sys.exit("puzzle is ({},{}), and getchar was called on ({},{})".format(rowno,colno,self.height(),self.width()))
+      raise RuntimeError("puzzle is ({},{}), and getchar was called on ({},{})".format(rowno,colno,self.height(),self.width()))
     return self._getchar(rowno,colno)
     
   def safe_getchar(self,rowno,colno):
@@ -232,7 +234,7 @@ class Puzzlestate:
     if isinstance(newtitle, str):
       self.data['title'] = newtitle
     else:
-      sys.exit('settitle called with something not a string')
+      raise RuntimeError('settitle called with something not a string')
     return self
 
   def writejson(self,filename):
@@ -240,7 +242,7 @@ class Puzzlestate:
       with open(filename, 'w') as f:
         json.dump(self.data, f, indent=2, sort_keys=True)
     except OSError:
-      sys.exit('Could not write json to {}'.format(filename))
+      raise RuntimeError('Could not write json to {}'.format(filename))
     return self
     
   def writesvg(self,filename,**kwargs):
@@ -251,19 +253,19 @@ class Puzzlestate:
       if isinstance(kwargs['showcluenumbers'], bool):
         showcluenumbers = kwargs['showcluenumbers']
       else:
-        sys.exit('writesvg keyword args need True or False')
+        raise RuntimeError('writesvg keyword args need True or False')
 
     if 'showsolvedcells' in kwargs:
       if isinstance(kwargs['showsolvedcells'], bool):
         showsolvedcells = kwargs['showsolvedcells']
       else:
-        sys.exit('writesvg keyword args need True or False')
+        raise RuntimeError('writesvg keyword args need True or False')
 
     if 'showtitle' in kwargs:
       if isinstance(kwargs['showtitle'], bool):
         showtitle = kwargs['showtitle']
       else:
-        sys.exit('writesvg keyword args need True or False')
+        raise RuntimeError('writesvg keyword args need True or False')
 
     title = self.gettitle()
     if title is None or title == '':
@@ -273,7 +275,7 @@ class Puzzlestate:
       if isinstance(kwargs['title'], str):
         title = kwargs['title']
       else:
-        sys.exit('titles need to be strings')
+        raise RuntimeError('titles need to be strings')
 
     WIDTH=self.width()
     HEIGHT=self.height()
@@ -393,7 +395,7 @@ class Puzzlestate:
     thisclue = random.choice(self.data['unsolved'])
     direction, cluenumber, length = thisclue
     if direction not in Puzzlestate.directions.keys():
-      sys.exit('{} is not a direction'.format(direction))
+      raise RuntimeError('{} is not a direction'.format(direction))
     row_increment, col_increment = Puzzlestate.directions[direction]
   
     # now we gather the constraints, i.e., letters already filled in
@@ -401,7 +403,7 @@ class Puzzlestate:
     constraints = list()
     row,col = self.data['answerlocations'][cluenumber]
     if col >= self.width() or row >= self.height():
-      sys.exit('answer location for {} {} is corrupt'.format(cluenumber,direction))
+      raise RuntimeError('answer location for {} {} is corrupt'.format(cluenumber,direction))
 
     length = 0
     while True:
@@ -423,7 +425,7 @@ class Puzzlestate:
     preferences = list()
     row,col = self.data['answerlocations'][cluenumber]
     if col >= self.width() or row >= self.height():
-      sys.exit('answer location for {} {} is corrupt'.format(cluenumber,direction))
+      raise RuntimeError('answer location for {} {} is corrupt'.format(cluenumber,direction))
     if direction == 'Across':
       nextletter = lambda row,col: [ row, col+1 ]
       prevletter = lambda row,col: [ row, col-1 ]
@@ -431,7 +433,7 @@ class Puzzlestate:
       nextletter = lambda row,col: [ row+1, col ]
       prevletter = lambda row,col: [ row-1, col ]
     else:
-      sys.exit('what kind of direction is {}'.format(direction))
+      raise RuntimeError('what kind of direction is {}'.format(direction))
 
     i = 0
     while True:
@@ -490,15 +492,15 @@ class Puzzlestate:
     row,col = self.data['answerlocations'][cluenumber]
     for c in word:
       if row < 0 or col < 0:
-        sys.exit('no negative indices thank you')
+        raise RuntimeError('no negative indices thank you')
       if col >= self.width():
-        sys.exit('tried to access col={} in a puzzle of width {}'.format(col,self.width()))
+        raise RuntimeError('tried to access col={} in a puzzle of width {}'.format(col,self.width()))
       if row >= self.height():
-        sys.exit('tried to access row={} in a puzzle of height {}'.format(row,self.height()))
+        raise RuntimeError('tried to access row={} in a puzzle of height {}'.format(row,self.height()))
       if self.testchar(row,col,c):
         pass 
       else:
-        sys.exit('hey whoa, {} was supposed to fit at ({},{})'.format(c,row,col))
+        raise RuntimeError('hey whoa, {} was supposed to fit at ({},{})'.format(c,row,col))
       row += row_increment   
       col += col_increment   
 
@@ -516,14 +518,14 @@ class Puzzlestate:
     height = self.height()
     width = self.width()
     if len(self.data['puzzle']) != height:
-      sys.exit("height of puzzle doesn't match stored height")
+      raise RuntimeError("height of puzzle doesn't match stored height")
     if len(self.data['solution']) != height:
-      sys.exit("height of solution doesn't match stored height")
+      raise RuntimeError("height of solution doesn't match stored height")
     for i, row in enumerate(self.data['puzzle']):
       if len(row) != width:
-        sys.exit("row {} of puzzle doesn't match width".format(i))
+        raise RuntimeError("row {} of puzzle doesn't match width".format(i))
       if len(self.data['solution']) != width:
-        sys.exit("row {} of solution doesn't match width".format(i))
+        raise RuntimeError("row {} of solution doesn't match width".format(i))
       for col in row:
         if (self.data['solution'][row][col] is not None and
             self.data['solution'][row][col] != ' ' and
@@ -552,7 +554,7 @@ class Puzzlestate:
     size = self.height() * self.width()
     black_squares = sum ( [ sum ([ 1 for col in row if col == '#' ]) for row in self.data['puzzle'] ] )
     if size == 0:
-      sys.exit("puzzle is size zero?")
+      raise RuntimeError("puzzle is size zero?")
     return black_squares / size
     
 
