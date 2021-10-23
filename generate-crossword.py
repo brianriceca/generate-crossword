@@ -11,7 +11,6 @@ import copy
 from puzzlestate import Puzzlestate
 from randomword import Randomword
 
-ababness = 1.0
 itercount = 0
 
 def solve(p,recursion_depth):
@@ -28,7 +27,7 @@ def solve(p,recursion_depth):
   if thisclue is None:
     # puzzle is solved! no more unsolved clues
     return p
-  direction, cluenumber, wordlength, constraints = thisclue
+  direction, cluenumber, wordlength, constraints, preferences = thisclue
 
   if constraints:
     print(' ' * recursion_depth, "Trying to solve {} {} with {}".format(cluenumber,direction,repr(constraints)))
@@ -37,7 +36,7 @@ def solve(p,recursion_depth):
 
   trywords = r.randomwords(wordlength, 
                              constraints,
-                             ababness, 'english1020' )
+                             'english1020' )
   if trywords is None:
     # Welp, no words in the dictionary fit
     print(' ' * recursion_depth, "Dang, nothing fits {} {}".format(cluenumber,direction))
@@ -49,6 +48,20 @@ def solve(p,recursion_depth):
     print(' ' * recursion_depth, "Dang, nothing new fits {} {}".format(cluenumber,direction))
     return None
       
+  # now we sort trywords so that words matching more preferences are earlier!
+
+  if len(preferences) > 0:
+    letters_in_the_right_place = dict()
+    for w in trywords:
+      score = len(w)
+      for p in preferences:
+        n, ok_letters = p
+        if w[n] not in ok_letters:
+          score -= 1       
+      letters_in_the_right_place[w] = (score * 128) // len(w)
+    
+    trywords.sort(key=lambda x: letters_in_the_right_place[x])
+
   for tryword in trywords:
     itercount += 1
     attemptno += 1 

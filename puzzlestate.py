@@ -15,6 +15,20 @@ class Puzzlestate:
     'Down': [1,0]
   }
 
+  class Letterkind:
+    vowels = { 'A', 'E', 'I', 'O', 'U', 'Y'}
+    safe_vowels = { *vowels, '#' }
+    consonants = {
+               'B', 'C', 'D', 'F', 'G', 'H', 
+               'J', 'K', 'L', 'M', 'N', 'P', 
+               'R', 'S', 'T', 'V', 'W', 'X', 
+               'Y', # yes Y is in both sets
+               'Z' }
+    safe_consonants = { *consonants, '#' }
+    terminals = { 'S', 'D', 'G' }
+    u = { 'U' }
+    h = { 'H' }
+
   def __init__(self,data):
     self.data = data
 
@@ -151,14 +165,23 @@ class Puzzlestate:
   def getwidth(self):
     return self.width()
 
-  def getchar(self,rowno,colno):
-    if rowno > self.height() or colno > self.width():
-      sys.exit("puzzle is ({},{}), and getchar was called on ({},{})".format(rowno,colno,self.height(),self.width()))
+  def _getchar(self,rowno,colno):
     if self.data["solution"][rowno][colno] is not None:
       return self.data["solution"][rowno][colno]
     return self.data["puzzle"][rowno][colno]
-    
 
+  def getchar(self,rowno,colno):
+    if rowno >= self.height() or colno >= self.width():
+      sys.exit("puzzle is ({},{}), and getchar was called on ({},{})".format(rowno,colno,self.height(),self.width()))
+    return self._getchar(rowno,colno)
+    
+  def safe_getchar(self,rowno,colno):
+    if (rowno >= self.height() or colno >= self.width() or
+        rowno < 0 or colno < 0):
+      return '#'
+    else:
+      return self._getchar(rowno,colno)
+         
   def setchar(self,rowno,colno,c):
     rowno = int(rowno)
     colno = int(colno)
@@ -394,8 +417,53 @@ class Puzzlestate:
       col += col_increment
       length += 1
     
+    # and now we gather the preferences, i.e., certain letters that are more
+    # likely to result in a fillable grid
+
+    preferences = list()
+    row,col = self.data['answerlocations'][cluenumber]
+    if col >= self.width() or row >= self.height():
+      sys.exit('answer location for {} {} is corrupt'.format(cluenumber,direction))
+    if direction == 'Across':
+      nextletter = lambda row,col: [ row, col+1 ]
+      prevletter = lambda row,col: [ row, col-1 ]
+    elif direction == 'Down':
+      nextletter = lambda row,col: [ row+1, col ]
+      prevletter = lambda row,col: [ row-1, col ]
+    else:
+      sys.exit('what kind of direction is {}'.format(direction))
+
+    i = 0
+    while True:
+      if col == self.width() or row == self.height(): 
+        # remember, rows and cols are numbered from zero
+        break
+      c = self.getchar(row,col)
+      if type(c) == str and c.isalpha():
+        # no preferences about this letter, since it's fixed!
+        break
+      if type(c) == str and c == '#':
+        break
+      p = self.safe_getchar(*prevletter(row,col))
+      n = self.safe_getchar(*nextletter(row,col))
+
+      if p == '#' and n == '#':
+        pass
+      elif p == 'Q':
+        preferences.append([i,self.Letterkind.u])
+      elif p in { 'T' , 'S' } and n == 'R':
+        preferences.append([i,self.Letterkind.h])
+      elif p in self.Letterkind.safe_vowels and n in self.Letterkind.safe_vowels:
+        preferences.append([i,self.Letterkind.consonants])
+      elif p in self.Letterkind.safe_consonants and n in self.Letterkind.safe_consonants:
+        preferences.append([i,self.Letterkind.vowels])
+
+      row += row_increment
+      col += col_increment
+      i += 1
+    
     self.data['unsolved'].remove(thisclue)
-    return [direction, cluenumber, length, constraints]
+    return [direction, cluenumber, length, constraints, preferences]
 
   def getwordsused(self):
     try:

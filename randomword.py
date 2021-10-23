@@ -40,7 +40,7 @@ class Randomword:
         f.close()
 
 
-  def randomwords(self, desired_length, constraints, ababness, category):
+  def randomwords(self, desired_length, constraints, category):
 
     if category not in self.words:
       sys.exit('unknown category {}'.category)
@@ -58,7 +58,6 @@ class Randomword:
     filtered_result = [ x for x in self.words[category] if r.match(x) ]
     if filtered_result is None:
       return None
-    random.shuffle(filtered_result)
     print('-----------------------')
     return filtered_result
 
