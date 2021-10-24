@@ -51,12 +51,12 @@ class Puzzlestate:
       with open(filename) as f:
         data = json.load(f)
     except OSError:
-      raise RuntimeError('Could not read json from {}'.format(filename))
+      raise RuntimeError(f'Could not read json from {filename}')
     
     if ('dimensions' not in data.keys() or 
         'width' not in data['dimensions'].keys() or
         'height' not in data['dimensions'].keys()):
-      raise RuntimeError('File {} missing puzzle dimension'.format(filename))
+      raise RuntimeError(f'File {filename} missing puzzle dimension')
     
     if type(data['dimensions']['width']) == float:
       raise RuntimeError('silly rabbit, widths can\'t be floats')
