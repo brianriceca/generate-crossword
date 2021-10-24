@@ -53,12 +53,10 @@ class Randomword:
     
     pattern = ''.join(pattern)
     r = re.compile('^' + pattern + '$')
-    print(pattern)
       
     filtered_result = [ x for x in self.words[category] if r.match(x) ]
     if filtered_result is None:
       return None
-    print('-----------------------')
     return filtered_result
 
 # end of class methods

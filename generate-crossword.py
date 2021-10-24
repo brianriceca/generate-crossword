@@ -7,14 +7,25 @@ usage: generate-crossword.py puzzlefile.json
 
 import sys
 import copy
+import logging
+
+from os import getpid
+pid = getpid()
+logging.basicConfig(filename=f'/tmp/generate-crossword-{pid}.log', encoding='utf-8', level=logging.DEBUG)
+
+def logit(*args):
+    msg = ' '.join(args)
+    logging.info(msg)
 
 from puzzlestate import Puzzlestate
 from randomword import Randomword
 
 itercount = 0
+wordsource = 'english1020'
 
 def solve(p,recursion_depth):
   global itercount
+  global wordsource
 
   r = Randomword(0)
 
@@ -30,22 +41,22 @@ def solve(p,recursion_depth):
   direction, cluenumber, wordlength, constraints, preferences = thisclue
 
   if constraints:
-    print(' ' * recursion_depth, "Trying to solve {} {} with {}".format(cluenumber,direction,repr(constraints)))
+    logit(' ' * recursion_depth, "Trying to solve {} {} with {}".format(cluenumber,direction,repr(constraints)))
   else:
-    print(' ' * recursion_depth, "Trying to solve {} {}".format(cluenumber,direction))
+    logit(' ' * recursion_depth, "Trying to solve {} {}".format(cluenumber,direction))
 
   trywords = r.randomwords(wordlength, 
                              constraints,
-                             'english1020' )
+                             wordsource )
   if trywords is None:
     # Welp, no words in the dictionary fit
-    print(' ' * recursion_depth, "Dang, nothing fits {} {}".format(cluenumber,direction))
+    logit(' ' * recursion_depth, "Dang, nothing fits {} {}".format(cluenumber,direction))
     return None  
     
   trywords =  [ x for x in trywords if x not in p.data['wordsused'] ]
   if trywords is None:
     # Welp, no words in the dictionary fit that haven't been tried.
-    print(' ' * recursion_depth, "Dang, nothing new fits {} {}".format(cluenumber,direction))
+    logit(' ' * recursion_depth, "Dang, nothing new fits {} {}".format(cluenumber,direction))
     return None
       
   # now we sort trywords so that words matching more preferences are earlier!
@@ -68,33 +79,34 @@ def solve(p,recursion_depth):
     p2 = p.copy().inscribe_word(tryword, direction, cluenumber)
 
     if p2 is None:
-      print(' ' * recursion_depth, "I tried {} in {} {}, but it doesn't fit".format(tryword,cluenumber,direction))
+      logit(' ' * recursion_depth, "I tried {} in {} {}, but it doesn't fit".format(tryword,cluenumber,direction))
       continue
 
 #    p2.settitle('Count {} Depth {} Attempt {}'.format(itercount,recursion_depth,attemptno))
-    print(' ' * recursion_depth, "{} seems to work in {} {}!".format(tryword,cluenumber,direction))
+    logit(' ' * recursion_depth, "{} seems to work in {} {}!".format(tryword,cluenumber,direction))
     p3 = solve(p2,recursion_depth+1)
     if p3 is None:
-      print(' ' * recursion_depth, "Well that didn't work")
+      logit(' ' * recursion_depth, "Well that didn't work")
       continue
-    print(' ' * recursion_depth, "The recursive call came back happy!")
+    logit(' ' * recursion_depth, "The recursive call came back happy!")
     return p3
   else: 
-    print(' ' * recursion_depth, "I tried all my word choices and none of them worked")
+    logit(' ' * recursion_depth, "I tried all my word choices and none of them worked")
     return None
 
   return p2
 
 def main():
-  infile = ''
-  if len(sys.argv) == 2:
+  global wordsource
+
+  infile = '/Users/brice/generate-crossword/puzzles/baby-animals-crossword.ipuz'
+  if len(sys.argv) > 3:
+    print("usage: {} puzzlefile.json".format(sys.argv[0]))
+    sys.exit(1)
+  if len(sys.argv) > 1:
     infile = sys.argv[1]
-  else:
-#    print("usage: {} puzzlefile.json".format(sys.argv[0]))
-#    sys.exit(1)
-    pass
-  if not infile:
-    infile = '/Users/brice/generate-crossword/puzzles/baby-animals-crossword.ipuz'
+    if len(sys.argv) > 2:
+      wordsource = sys.argv[2]
 
   p = Puzzlestate.fromjsonfile(infile)
 

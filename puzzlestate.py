@@ -92,6 +92,8 @@ class Puzzlestate:
       data['answerlocations'] = dict()
     if 'answerlengths' not in data.keys():
       data['answerlengths'] = dict()
+    if 'unsolved' not in data.keys():
+      data['unsolved'] = list()
   
     # let's validate the puzzle and die if it is broken
 
@@ -139,21 +141,20 @@ class Puzzlestate:
         xloc,yloc = data['answerlocations'][cluenumber[0]]
         # [1] is the clue for a human solver, we don't care about that
         if data['puzzle'][xloc][yloc] != cluenumber[0]:
-          raise RuntimeError('found a mismatch at ({},{}): expected {}, saw {}'.format(
-                                                                        xloc,
-                                                                        yloc,
-                                                                        cluenumber[0],
-                                                                        data['puzzle'][xloc][yloc]))
+          raise RuntimeError(f"found a mismatch at ({xloc},{yloc}): expected {cluenumber}, saw {data['puzzle'][xloc][yloc]}")
       # now we count the number of blanks from the start of the clue, in the given direction, 
       # to the next '#' or boundary
         
-      data['answerlengths'][repr([ direction, cluenumber[0] ])] = 1
-      while True:
-        xloc += Puzzlestate.directions[direction][0]
-        yloc += Puzzlestate.directions[direction][1]
-        if xloc == width or yloc == height or data['puzzle'][xloc][yloc] == '#':
-          break 
-        data['answerlengths'][repr([ direction, cluenumber[0] ])] += 1
+        n = 1
+        while True:
+          xloc += Puzzlestate.directions[direction][0]
+          yloc += Puzzlestate.directions[direction][1]
+          if xloc == width or yloc == height or data['puzzle'][xloc][yloc] == '#':
+            break 
+          n += 1
+
+        data['answerlengths'][repr([ direction, cluenumber[0] ])] = n
+        data['unsolved'].append( [ direction, cluenumber[0], n ] )
 
     return cls(data)
 
@@ -390,7 +391,7 @@ class Puzzlestate:
     drawing.save()
       
   def random_unsolved_clue(self):
-    if len(self.data['unsolved']) == 0:
+    if 'unsolved' not in self.data or len(self.data['unsolved']) == 0:
       return None
     thisclue = random.choice(self.data['unsolved'])
     direction, cluenumber, length = thisclue
