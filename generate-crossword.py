@@ -38,7 +38,7 @@ def solve(p,recursion_depth):
   if thisclue is None:
     # puzzle is solved! no more unsolved clues
     return p
-  direction, cluenumber, wordlength, constraints, preferences = thisclue
+  direction, cluenumber, wordlength, constraints, preferences, coldspots = thisclue
 
   if constraints:
     logit(' ' * recursion_depth, "Trying to solve {} {} with {}".format(cluenumber,direction,repr(constraints)))
@@ -65,8 +65,8 @@ def solve(p,recursion_depth):
     letters_in_the_right_place = dict()
     for w in trywords:
       score = len(w)
-      for p in preferences:
-        n, ok_letters = p
+      for pref in preferences:
+        n, ok_letters = pref
         if w[n] not in ok_letters:
           score -= 1       
       letters_in_the_right_place[w] = (score * 128) // len(w)
