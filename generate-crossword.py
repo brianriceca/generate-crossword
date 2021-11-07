@@ -10,11 +10,10 @@ import copy
 import logging
 
 from os import getpid
-pid = getpid()
-logging.basicConfig(filename=f'/tmp/generate-crossword-{pid}.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename=f'/tmp/generate-crossword-{getpid()}.log', encoding='utf-8', level=logging.DEBUG)
 
-def logit(*args):
-    msg = ' '.join(args)
+def logit(n,*args):
+    msg = ' ' * n + ' '.join(args)
     logging.info(msg)
 
 from puzzlestate import Puzzlestate
@@ -41,22 +40,22 @@ def solve(p,recursion_depth):
   direction, cluenumber, wordlength, constraints, preferences, coldspots = thisclue
 
   if constraints:
-    logit(' ' * recursion_depth, "Trying to solve {} {} with {}".format(cluenumber,direction,repr(constraints)))
+    logit(recursion_depth, f'Trying to solve {cluenumber} {direction} with {repr(constraints)}')
   else:
-    logit(' ' * recursion_depth, "Trying to solve {} {}".format(cluenumber,direction))
+    logit(recursion_depth, f'Trying to solve {cluenumber} {direction}')
 
   trywords = r.randomwords(wordlength, 
                              constraints,
                              wordsource )
-  if trywords is None:
+  if len(trywords) == 0:
     # Welp, no words in the dictionary fit
-    logit(' ' * recursion_depth, "Dang, nothing fits {} {}".format(cluenumber,direction))
+    logit(recursion_depth, f'Dang, nothing fits {cluenumber} {direction}')
     return None  
     
   trywords =  [ x for x in trywords if x not in p.data['wordsused'] ]
-  if trywords is None:
+  if len(trywords) == 0:
     # Welp, no words in the dictionary fit that haven't been tried.
-    logit(' ' * recursion_depth, "Dang, nothing new fits {} {}".format(cluenumber,direction))
+    logit(recursion_depth, f'Dang, nothing new fits {cluenumber} {direction}')
     return None
       
   # now we sort trywords so that words matching more preferences are earlier!
@@ -71,7 +70,7 @@ def solve(p,recursion_depth):
           score -= 1       
       letters_in_the_right_place[w] = (score * 128) // len(w)
     
-    trywords.sort(key=lambda x: letters_in_the_right_place[x])
+    trywords.sort(key=lambda x: letters_in_the_right_place[x],reverse=True)
 
   for tryword in trywords:
     itercount += 1
@@ -79,19 +78,19 @@ def solve(p,recursion_depth):
     p2 = p.copy().inscribe_word(tryword, direction, cluenumber)
 
     if p2 is None:
-      logit(' ' * recursion_depth, "I tried {} in {} {}, but it doesn't fit".format(tryword,cluenumber,direction))
+      logit(recursion_depth, "I tried {} in {} {}, but it doesn't fit".format(tryword,cluenumber,direction))
       continue
 
 #    p2.settitle('Count {} Depth {} Attempt {}'.format(itercount,recursion_depth,attemptno))
-    logit(' ' * recursion_depth, "{} seems to work in {} {}!".format(tryword,cluenumber,direction))
+    logit(recursion_depth, "{} seems to work in {} {}!".format(tryword,cluenumber,direction))
     p3 = solve(p2,recursion_depth+1)
     if p3 is None:
-      logit(' ' * recursion_depth, "Well that didn't work")
+      logit(recursion_depth, "Well that didn't work")
       continue
-    logit(' ' * recursion_depth, "The recursive call came back happy!")
+    logit(recursion_depth, f"The recursive call with {direction} {cluenumber} == {tryword} came back happy!")
     return p3
   else: 
-    logit(' ' * recursion_depth, "I tried all my word choices and none of them worked")
+    logit(recursion_depth, f"Bummer, the recursive call with {direction} {cluenumber} == {tryword} failed")
     return None
 
   return p2

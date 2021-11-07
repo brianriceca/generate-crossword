@@ -183,7 +183,7 @@ class Puzzlestate:
         rowno < 0 or colno < 0):
       return '#'
     else:
-      return self._getchar(rowno,colno)
+      return str(self._getchar(rowno,colno))
          
   def setchar(self,rowno,colno,c):
     rowno = int(rowno)
@@ -393,10 +393,10 @@ class Puzzlestate:
   def random_unsolved_clue(self):
     if 'unsolved' not in self.data or len(self.data['unsolved']) == 0:
       return None
-    thisclue = random.choice(self.data['unsolved'])
+    thisclue = self.data['unsolved'].pop()
     direction, cluenumber, length = thisclue
     if direction not in Puzzlestate.directions.keys():
-      raise RuntimeError('{} is not a direction'.format(direction))
+      raise RuntimeError(f'{direction} is not a direction')
     row_increment, col_increment = Puzzlestate.directions[direction]
   
     # now we gather the constraints, i.e., letters already filled in
@@ -421,9 +421,15 @@ class Puzzlestate:
       length += 1
     
     # and now we gather the preferences, i.e., certain letters that are more
-    # likely to result in a fillable grid
+    # likely to result in a fillable grid.
+    # also find the coldspots, in other words, places in this word that
+    # make a downward search path from filling in this clue non-unique.
+    # BOAT and BOOT lead to the same searchspace if the third character doesn't
+    # matter
+
 
     preferences = list()
+    coldspots = list()
     row,col = self.data['answerlocations'][cluenumber]
     if col >= self.width() or row >= self.height():
       raise RuntimeError('answer location for {} {} is corrupt'.format(cluenumber,direction))
@@ -434,7 +440,7 @@ class Puzzlestate:
       nextletter = lambda row,col: [ row+1, col ]
       prevletter = lambda row,col: [ row-1, col ]
     else:
-      raise RuntimeError('what kind of direction is {}'.format(direction))
+      raise RuntimeError(f'what kind of direction is {direction}')
 
     i = 0
     while True:
@@ -451,8 +457,11 @@ class Puzzlestate:
       n = self.safe_getchar(*nextletter(row,col))
 
       if p == '#' and n == '#':
-        pass
-      elif p == 'Q':
+        coldspots.append(i)
+      elif p.isalpha() and n.isalpha():
+        coldspots.append(i)
+
+      if p == 'Q':
         preferences.append([i,self.Letterkind.u])
       elif p in { 'T' , 'S' } and n == 'R':
         preferences.append([i,self.Letterkind.h])
@@ -465,8 +474,7 @@ class Puzzlestate:
       col += col_increment
       i += 1
     
-    self.data['unsolved'].remove(thisclue)
-    return [direction, cluenumber, length, constraints, preferences]
+    return [direction, cluenumber, length, constraints, preferences, coldspots]
 
   def getwordsused(self):
     try:
