@@ -1,29 +1,39 @@
 #!/usr/bin/env python3
-'''
+"""
 generate-crossword.py: fill a crossword puzzle bracket with random words
 
 usage: generate-crossword.py puzzlefile.json
-'''
+"""
 
 import sys
 import copy
 import logging
-
 from os import getpid
+
+from randomword import Randomword
+from puzzlestate import Puzzlestate
+
 logging.basicConfig(filename=f'/tmp/generate-crossword-{getpid()}.log',
                     encoding='utf-8', level=logging.DEBUG)
 
-def logit(n,*args):
-  msg = ' ' * n + ' '.join(args)
-  logging.info(msg)
+def logit(how_much_to_indent,*args):
+  """
+  wrapper around logging call with numerically controlled indention
 
-from puzzlestate import Puzzlestate
-from randomword import Randomword
+  TODO: maybe replace with decorator?
+  """
+  msg = ' ' * how_much_to_indent + ' '.join(args)
+  logging.info(msg)
 
 itercount = 0
 wordsource = 'english1020'
 
 def solve(p,recursion_depth):
+  """
+  attempt to find a word that fits into one clue in puzzle p and then
+  recursively solve the puzzle with that clue inserted
+  """
+  
   global itercount
   global wordsource
 
@@ -94,10 +104,10 @@ def solve(p,recursion_depth):
     logit(recursion_depth,
           f"The recursive call with {direction} {cluenumber} == {tryword} came back happy!")
     return p3
-  else:
-    logit(recursion_depth,
-          f"Bummer, the recursive call with {direction} {cluenumber} == {tryword} failed")
-    return None
+  
+  logit(recursion_depth,
+        f"Bummer, the recursive call with {direction} {cluenumber} == {tryword} failed")
+  return None
 
   return p2
 
