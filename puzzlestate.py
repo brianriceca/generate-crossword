@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+operations on a crossword puzzle state
+"""
 
 import random
 import json
@@ -7,13 +10,45 @@ import sys
 import svgwrite
 
 class Puzzlestate:
+  """
+  operations on a crossword puzzle state
+  """
 
-# Directions are defined as (rowincrement,colincrement)
+  # Directions are defined as (rowincrement,colincrement)
 
   directions = {
     'Across': [0,1],
     'Down': [1,0]
   }
+
+  letterpairfreqs = [
+        [ 1, 20, 33, 52, 0, 12, 18, 5, 39, 1, 12, 57, 26, 181, 1, 20, 1, 75, 95, 104, 9, 20, 13, 1, 26, 1 ],
+        [ 11, 1, 0, 0, 47, 0, 0, 0, 6, 1, 0, 17, 0, 0, 19, 0, 0, 11, 2, 1, 21, 0, 0, 0, 11, 0 ],
+        [ 31, 0, 4, 0, 38, 0, 0, 38, 10, 0, 18, 9, 0, 0, 45, 0, 1, 11, 1, 15, 7, 0, 0, 0, 1, 0 ],
+        [ 48, 20, 9, 13, 57, 11, 7, 25, 50, 3, 1, 11, 14, 16, 41, 6, 0, 14, 35, 56, 10, 2, 19, 0, 10, 0 ],
+        [ 110, 23, 45, 126, 48, 30, 15, 33, 41, 3, 5, 55, 47, 111, 33, 28, 2, 169, 115, 83, 6, 24, 50, 9, 26, 0 ],
+        [ 25, 2, 3, 2, 20, 11, 1, 8, 23, 1, 0, 8, 5, 1, 40, 2, 0, 16, 5, 37, 8, 0, 3, 0, 2, 0 ],
+        [ 24, 3, 2, 2, 28, 3, 4, 35, 18, 1, 0, 7, 3, 4, 23, 1, 0, 12, 9, 16, 7, 0, 5, 0, 1, 0 ],
+        [ 114, 2, 2, 1, 302, 2, 1, 6, 97, 0, 0, 2, 3, 1, 49, 1, 0, 8, 5, 32, 8, 0, 4, 0, 4, 0 ],
+        [ 10, 5, 32, 33, 23, 17, 25, 6, 1, 1, 8, 37, 37, 179, 24, 6, 0, 27, 86, 93, 1, 14, 7, 2, 0, 2 ],
+        [ 2, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0  ],
+        [ 6, 1, 1, 1, 29, 1, 0, 2, 14, 0, 0, 2, 1, 9, 4, 0, 0, 0, 5, 4, 1, 0, 2, 0, 2, 0 ],
+        [ 40, 3, 2, 36, 64, 10, 1, 4, 47, 0, 3, 56, 4, 2, 41, 3, 0, 2, 11, 15, 8, 3, 5, 0, 31, 0 ],
+        [ 44, 7, 1, 1, 68, 2, 1, 3, 25, 0, 0, 1, 5, 2, 29, 11, 0, 3, 10, 1, 9, 8, 0, 4, 0, 18, 0 ],
+        [ 40, 7, 25, 146, 66, 8, 92, 16, 33, 2, 8, 9, 7, 8, 60, 4, 1, 3, 33, 106, 6, 2, 12, 0, 11, 0 ],
+        [ 16, 12, 13, 18, 5, 80, 7, 11, 12, 1, 13, 26, 48, 106, 36, 15, 0, 84, 28, 57, 115, 12, 46, 0, 5, 1 ],
+        [ 23, 1, 0, 0, 30, 1, 0, 3, 12, 0, 0, 15, 1, 0, 21, 10, 0, 18, 5, 11, 6, 0, 1, 0, 1, 0 ],
+        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0  ],
+        [ 50, 7, 10, 20, 133, 8, 10, 12, 50, 1, 8, 10, 14, 16, 55, 6, 0, 14, 37, 42, 12, 4, 11, 0, 21, 0 ],
+        [ 67, 11, 17, 7, 74, 11, 4, 50, 49, 2, 6, 13, 12, 10, 57, 20, 2, 4, 43, 109, 20, 2, 24, 0, 4, 0 ],
+        [ 59, 10, 11, 7, 75, 9, 3, 330, 76, 1, 2, 17, 11, 7, 115, 4, 0, 28, 34, 56, 17, 1, 31, 0, 16, 0 ],
+        [ 7, 5, 12, 7, 7, 2, 14, 2, 8, 0, 1, 34, 8, 36, 1, 16, 0, 44, 35, 48, 0, 0, 2, 0, 1, 0 ],
+        [ 5, 0, 0, 0, 65, 0, 0, 0, 11, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0 ],
+        [ 66, 1, 1, 2, 39, 1, 0, 44, 39, 0, 0, 2, 1, 12, 29, 0, 0, 3, 4, 4, 1, 0, 2, 0, 1, 0 ],
+        [ 1, 0, 2, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0  ],
+        [ 18, 7, 6, 6, 14, 7, 3, 10, 11, 1, 1, 4, 6, 3, 36, 4, 0, 3, 19, 20, 1, 1, 12, 0, 2, 0 ],
+        [ 1, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  ]
+        ]
 
   class Letterkind:
     vowels = { 'A', 'E', 'I', 'O', 'U', 'Y'}
@@ -58,9 +93,7 @@ class Puzzlestate:
         'height' not in data['dimensions'].keys()):
       raise RuntimeError(f'File {filename} missing puzzle dimension')
 
-    if isinstance(data['dimensions']['width'],float):
-      raise RuntimeError('silly rabbit, widths can\'t be floats')
-    elif isinstance(data['dimensions']['width'],str):
+    if isinstance(data['dimensions']['width'],str):
       if data['dimensions']['width'].isnumeric():
         data['dimensions']['width'] = int(data['dimensions']['width'])
       else:
@@ -69,9 +102,7 @@ class Puzzlestate:
     if data['dimensions']['width'] <= 0:
       raise RuntimeError('width must be positive')
 
-    if isinstance(data['dimensions']['height'],float):
-      raise RuntimeError('silly rabbit, heights can\'t be float')
-    elif isinstance(data['dimensions']['height'],str):
+    if isinstance(data['dimensions']['height'],str):
       if data['dimensions']['height'].isnumeric():
         data['dimensions']['height'] = int(data['dimensions']['height'])
       else:
@@ -129,13 +160,13 @@ class Puzzlestate:
         elif isinstance(cellcontents, dict):
           raise RuntimeError("I don't know how to deal with fancy cells yet")
         else:
-          raise RuntimeError("weird cell content: [{},{}] is {}".format(row,col,cellcontents))
+          raise RuntimeError(f"weird cell content: [{row},{col}] is {cellcontents}")
 
     # now squirrel away the length of the answer for each clue
 
     for direction in data['clues']:
       if direction not in Puzzlestate.directions.keys():
-        raise RuntimeError("{} is not a direction".format(direction))
+        raise RuntimeError(f"{direction} is not a direction")
       for cluenumber in data['clues'][direction]:
         xloc,yloc = data['answerlocations'][cluenumber[0]]
         # [1] is the clue for a human solver, we don't care about that
@@ -148,7 +179,8 @@ class Puzzlestate:
         while True:
           xloc += Puzzlestate.directions[direction][0]
           yloc += Puzzlestate.directions[direction][1]
-          if xloc == width or yloc == height or data['puzzle'][xloc][yloc] == '#':
+          if (xloc == width or yloc == height or
+              data['puzzle'][xloc][yloc] == '#'):
             break
           n += 1
 
@@ -174,15 +206,14 @@ class Puzzlestate:
 
   def getchar(self,rowno,colno):
     if rowno >= self.height() or colno >= self.width():
-      raise RuntimeError("puzzle is ({},{}), and getchar was called on ({},{})".format(rowno,colno,self.height(),self.width()))
+      raise RuntimeError(f"puzzle is ({self.height()},{self.width()}), and getchar was called on ({rowno},{colno})")
     return self._getchar(rowno,colno)
 
   def safe_getchar(self,rowno,colno):
     if (rowno >= self.height() or colno >= self.width() or
         rowno < 0 or colno < 0):
       return '#'
-    else:
-      return str(self._getchar(rowno,colno))
+    return str(self._getchar(rowno,colno))
 
   def setchar(self,rowno,colno,c):
     rowno = int(rowno)
@@ -212,15 +243,11 @@ class Puzzlestate:
     c2 = self.getchar(rowno,colno)
     if c2 is None:
       return True # Yay!  It's not been filled in yet
-    if type(c2) == int:
+    if isinstance(c2,int):
       return True # It's either a 0 for an empty space or else a clue number
-    if type(c2) == str and (
-        c2 == '?'
-        or c2 == '*'
-        or c2 == ' '
-        or c2 == '.') :
+    if isinstance(c2,str) and c2 in ('?', '*', ' ', '.'):
       return True # Yay!  It's not been filled in yet
-    if type(c2) == str and c2.upper() == c.upper():
+    if isinstance(c2,str) and c2.upper() == c.upper():
       return True # Yay! It's already the character we want.
     return False # D'oh! The space is already in use with a different letter
 
@@ -239,7 +266,7 @@ class Puzzlestate:
 
   def writejson(self,filename):
     try:
-      with open(filename, 'w') as f:
+      with open(filename, 'w', encoding='utf-8') as f:
         json.dump(self.data, f, indent=2, sort_keys=True)
     except OSError:
       raise RuntimeError('Could not write json to {}'.format(filename))
@@ -300,7 +327,7 @@ class Puzzlestate:
     SOLUTION_STYLE = "font-size:8px; font-family:Arial"
     TITLE_STYLE = "font-size:8px; font-family:Times New Roman"
 
-    PUZZLESIZE = ("{}mm".format(WIDTH_MM),"{}mm".format(HEIGHT_MM))
+    PUZZLESIZE = (f"{WIDTH_MM}mm",f"{HEIGHT}mm")
 
     drawing = svgwrite.Drawing(filename, size=PUZZLESIZE)
     drawing.viewbox(0, 0, HEIGHT_MM, WIDTH_MM)
@@ -308,7 +335,6 @@ class Puzzlestate:
     # draw horizontal lines
     for i in range(1,HEIGHT):
       y = TOP_MARGIN_MM + i * CELLSIZE_MM
-#      print("horizontal line from ({},{}) to ({},{})".format(SIDE_MARGIN_MM, y, CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y))
       drawing.add(drawing.line(start=(SIDE_MARGIN_MM, y), end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y),
                  stroke=LINE_COLOR,stroke_width=1))
     drawing.add(drawing.line(start=(SIDE_MARGIN_MM,
@@ -323,7 +349,7 @@ class Puzzlestate:
     # draw vertical lines
     for i in range(1,WIDTH):
       x = SIDE_MARGIN_MM + i * CELLSIZE_MM
-#      print("vertical line from ({},{}) to ({},{})".format(x,TOP_MARGIN_MM, x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM))
+  #      print("vertical line from ({},{}) to ({},{})".format(x,TOP_MARGIN_MM, x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM))
       drawing.add(drawing.line(start=(x,TOP_MARGIN_MM), end=(x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
                   stroke=LINE_COLOR,stroke_width=1))
     drawing.add(drawing.line(start=(SIDE_MARGIN_MM,TOP_MARGIN_MM), end=(SIDE_MARGIN_MM, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
@@ -337,10 +363,10 @@ class Puzzlestate:
     for row in range(HEIGHT):
       for col in range(WIDTH):
         if self.getchar(row,col) == '#':
-#          print("drawing a box at x={}, y={}".format(
-#                                   col*CELLSIZE_MM+SIDE_MARGIN_MM,
-#                                   row*CELLSIZE_MM+TOP_MARGIN_MM
-#                                  ))
+  #          print("drawing a box at x={}, y={}".format(
+  #                                   col*CELLSIZE_MM+SIDE_MARGIN_MM,
+  #                                   row*CELLSIZE_MM+TOP_MARGIN_MM
+  #                                  ))
           drawing.add(drawing.rect(insert=(
                                    col*CELLSIZE_MM+SIDE_MARGIN_MM,
                                    row*CELLSIZE_MM+TOP_MARGIN_MM
@@ -352,10 +378,10 @@ class Puzzlestate:
       g = drawing.g(class_='cluenumber',style = CLUENUMBER_STYLE)
       for answer in self.data['answerlocations'].keys():
         row,col = self.data['answerlocations'][answer]
-#        print("writing a clue number at x={}, y={}".format(
-#                            col*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_CLUENUM_X,
-#                            row*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_CLUENUM_Y,
-#                           ))
+  #        print("writing a clue number at x={}, y={}".format(
+  #                            col*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_CLUENUM_X,
+  #                            row*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_CLUENUM_Y,
+  #                           ))
 
         g.add(drawing.text(answer,
                     insert=(
@@ -369,7 +395,7 @@ class Puzzlestate:
       for row in range(HEIGHT):
         for col in range(WIDTH):
           c = self.getchar(row,col)
-          if type(c) == str and c.isalpha():
+          if isinstance(c,str) and c.isalpha():
             g.add(drawing.text(self.getchar(row,col),
                     insert=(
                             col*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_SOLUTION_X,
@@ -390,8 +416,11 @@ class Puzzlestate:
     drawing.save()
 
   def random_unsolved_clue(self):
-    if 'unsolved' not in self.data or len(self.data['unsolved']) == 0:
+    if 'unsolved' not in self.data:
+      raise RuntimeError('missing unsolved data element')
+    if len(self.data['unsolved']) == 0:
       return None
+
     thisclue = self.data['unsolved'].pop()
     direction, cluenumber, length = thisclue
     if direction not in Puzzlestate.directions.keys():
@@ -411,33 +440,29 @@ class Puzzlestate:
         # remember, rows and cols are numbered from zero
         break
       c = self.getchar(row,col)
-      if type(c) == str and c.isalpha():
+      if isinstance(c,str) and c.isalpha():
         constraints.append([length,c])
-      if type(c) == str and c == '#':
+      if isinstance(c,str) and c == '#':
         break
       row += row_increment
       col += col_increment
       length += 1
 
-    # and now we gather the preferences, i.e., certain letters that are more
-    # likely to result in a fillable grid.
-    # also find the coldspots, in other words, places in this word that
+    # and now we gather coldspots, in other words, places in this word that
     # make a downward search path from filling in this clue non-unique.
     # BOAT and BOOT lead to the same searchspace if the third character doesn't
     # matter
 
-
-    preferences = list()
     coldspots = list()
     row,col = self.data['answerlocations'][cluenumber]
     if col >= self.width() or row >= self.height():
       raise RuntimeError('answer location for {} {} is corrupt'.format(cluenumber,direction))
     if direction == 'Across':
-      nextletter = lambda row,col: [ row, col+1 ]
-      prevletter = lambda row,col: [ row, col-1 ]
+      port = lambda row,col: [ row-1, col ]
+      starboard = lambda row,col: [ row+1, col ]
     elif direction == 'Down':
-      nextletter = lambda row,col: [ row+1, col ]
-      prevletter = lambda row,col: [ row-1, col ]
+      port = lambda row,col: [ row, col+1 ]
+      starboard = lambda row,col: [ row, col-1 ]
     else:
       raise RuntimeError(f'what kind of direction is {direction}')
 
@@ -447,33 +472,22 @@ class Puzzlestate:
         # remember, rows and cols are numbered from zero
         break
       c = self.getchar(row,col)
-      if type(c) == str and c.isalpha():
+      if isinstance(c,str) and c.isalpha():
         # no preferences about this letter, since it's fixed!
         break
-      if type(c) == str and c == '#':
+      if isinstance(c,str) and c == '#':
         break
-      p = self.safe_getchar(*prevletter(row,col))
-      n = self.safe_getchar(*nextletter(row,col))
+      p = self.safe_getchar(*starboard(row,col))
+      n = self.safe_getchar(*port(row,col))
 
       if p == '#' and n == '#':
         coldspots.append(i)
-      elif p.isalpha() and n.isalpha():
-        coldspots.append(i)
-
-      if p == 'Q':
-        preferences.append([i,self.Letterkind.u])
-      elif p in { 'T' , 'S' } and n == 'R':
-        preferences.append([i,self.Letterkind.h])
-      elif p in self.Letterkind.safe_vowels and n in self.Letterkind.safe_vowels:
-        preferences.append([i,self.Letterkind.consonants])
-      elif p in self.Letterkind.safe_consonants and n in self.Letterkind.safe_consonants:
-        preferences.append([i,self.Letterkind.vowels])
 
       row += row_increment
       col += col_increment
       i += 1
 
-    return [direction, cluenumber, length, constraints, preferences, coldspots]
+    return [direction, cluenumber, length, constraints, coldspots]
 
   def getwordsused(self):
     try:
@@ -490,29 +504,81 @@ class Puzzlestate:
     newp.data = copy.deepcopy(self.data)
     return newp
 
-  def inscribe_word(self,word,direction,cluenumber):
-    # returns object containing the word if it was able to inscribe it,
-    # else returns none
+  def test_word(self,word,direction,cluenumber):
 
     row_increment,col_increment = Puzzlestate.directions[direction]
 
-    # first, a test
     row,col = self.data['answerlocations'][cluenumber]
     for c in word:
       if row < 0 or col < 0:
-        raise RuntimeError('no negative indices thank you')
+        return False
       if col >= self.width():
-        raise RuntimeError('tried to access col={} in a puzzle of width {}'.format(col,self.width()))
+        return False
       if row >= self.height():
-        raise RuntimeError('tried to access row={} in a puzzle of height {}'.format(row,self.height()))
+        return False
       if self.testchar(row,col,c):
         pass
       else:
-        raise RuntimeError('hey whoa, {} was supposed to fit at ({},{})'.format(c,row,col))
+        return False
+      row += row_increment
+      col += col_increment
+    return True
+
+  def score_word(self,tryword,direction,cluenumber,safe=True):
+    # returns object containing the word if it was able to inscribe it,
+    # else returns none
+
+    if safe:
+      if self.test_word(tryword,direction,cluenumber):
+        pass
+      else:
+        return None
+
+    row_increment,col_increment = Puzzlestate.directions[direction]
+    if direction == 'Across':
+      port = lambda row,col: [ row, col+1 ]
+      starboard = lambda row,col: [ row, col-1 ]
+    elif direction == 'Down':
+      port = lambda row,col: [ row+1, col ]
+      starboard = lambda row,col: [ row-1, col ]
+    else:
+      raise RuntimeError(f'what kind of direction is {direction}')
+
+    row,col = self.data['answerlocations'][cluenumber]
+    score = 0
+    for c in tryword:
+      predecessor = self.safe_getchar(*starboard(row,col))
+      successor = self.safe_getchar(*port(row,col))
+
+      if predecessor == '#' and successor == '#':
+        # no preferences about this letter, since it's surrounded by borders!
+        row += row_increment
+        col += col_increment
+        continue
+      if isinstance(predecessor,str) and predecessor.isalpha():
+        score += self.letterpairfreqs[ord(predecessor)-65][ord(c)-65]
+      if isinstance(successor,str) and successor.isalpha():
+        score += self.letterpairfreqs[ord(c)-65][ord(successor)-65]
+
       row += row_increment
       col += col_increment
 
-    # OK, it fits
+    return score
+
+  def inscribe_word(self,word,direction,cluenumber,safe=True):
+    """
+    returns object containing the word if it was able to inscribe it,
+    else returns none
+    """
+
+    if safe:
+      if self.test_word(word,direction,cluenumber):
+        pass
+      else:
+        return None
+
+    row_increment,col_increment = Puzzlestate.directions[direction]
+
     row,col = self.data['answerlocations'][cluenumber]
     for c in word:
       self.setchar(row,col,c)
@@ -560,13 +626,15 @@ class Puzzlestate:
 
   def sparseness(self):
     size = self.height() * self.width()
-    black_squares = sum ( [ sum ([ 1 for col in row if col == '#' ]) for row in self.data['puzzle'] ] )
+    black_squares = sum ( [ sum ([ 1 for col in row if col == '#' ]) 
+                                   for row in self.data['puzzle'] ] )
     if size == 0:
       raise RuntimeError("puzzle is size zero?")
     return black_squares / size
 
 
 def main():
+  """for testing"""
   if len(sys.argv) == 1:
     sourcefile = "puzzles/baby-animals-crossword.ipuz"
   else:
@@ -582,4 +650,3 @@ if __name__ == '__main__':
   """for testing"""
   random.seed()
   main()
-

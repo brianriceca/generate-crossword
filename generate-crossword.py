@@ -8,12 +8,11 @@ usage: generate-crossword.py puzzlefile.json
 import sys
 import logging
 from os import getpid
-
 from randomword import Randomword
 from puzzlestate import Puzzlestate
 
-logging.basicConfig(filename=f'/tmp/generate-crossword-{getpid()}.log',
-                    level=logging.DEBUG)
+#logging.basicConfig(filename=f'/tmp/generate-crossword-{getpid()}.log',
+#                    level=logging.DEBUG)
 
 def logit(how_much_to_indent,*args):
   """
@@ -27,9 +26,15 @@ def logit(how_much_to_indent,*args):
 DEFAULT_PUZZLE = '/Users/brice/generate-crossword/puzzles/baby-animals-crossword.ipuz'
 DEFAULT_WORDSOURCE = 'english1020'
 
+def _mask_coldspots(tryword, coldspots):
+  tryword_exploded = [ x for x in tryword ]
+  for loc in coldspots:
+    tryword_exploded[loc] = "~"
+  return ''.join(tryword_exploded)
+
 def solve(puzzle,recursion_depth,wordsource):
   """
-  attempt to find a word that fits into one clue in puzzle p and then
+  attempt to find a word that fits into one clue in puzzle and then
   recursively solve the puzzle with that clue inserted
   """
 
@@ -42,14 +47,12 @@ def solve(puzzle,recursion_depth,wordsource):
   if thisclue is None:
     # puzzle is solved! no more unsolved clues
     return puzzle
-  direction, cluenumber, wordlength, constraints, preferences = thisclue
+  direction, cluenumber, wordlength, constraints, coldspots = thisclue
 
   if constraints:
-    logit(recursion_depth,
-        f'Trying to solve {cluenumber} {direction} with {repr(constraints)}')
+    logit(recursion_depth, f'Trying to solve {cluenumber} {direction} with {repr(constraints)}')
   else:
-    logit(recursion_depth,
-        f'Trying to solve {cluenumber} {direction}')
+    logit(recursion_depth, f'Trying to solve {cluenumber} {direction}')
 
   trywords = wordspitter.randomwords(wordlength,
                                      constraints,
@@ -65,21 +68,17 @@ def solve(puzzle,recursion_depth,wordsource):
     logit(recursion_depth, f'Dang, nothing new fits {cluenumber} {direction}')
     return None
 
-  # now we sort trywords so that words matching more preferences are earlier!
+  # now we sort trywords so that words that score higher are earlier!
 
-  if len(preferences) > 0:
-    letters_in_the_right_place = {}
-    for wrd in trywords:
-      score = len(wrd)
-      for pref in preferences:
-        place_in_wrd, ok_letters = pref
-        if wrd[place_in_wrd] not in ok_letters:
-          score -= 1
-      letters_in_the_right_place[wrd] = (score * 128) // len(wrd)
+  trywords.sort(key=lambda x: puzzle.score_word(x, direction, cluenumber),reverse=True)
 
-    trywords.sort(key=lambda x: letters_in_the_right_place[x],reverse=True)
-
+  paths_already_explored = set()
   for tryword in trywords:
+    tryword_masked = _mask_coldspots(tryword,coldspots)
+    if tryword_masked in paths_already_explored:
+      logit(recursion_depth,f'hey, no point in pursuing {tryword}')
+      continue
+    paths_already_explored.add(tryword_masked)
     puzzle2 = puzzle.copy().inscribe_word(tryword, direction, cluenumber)
 
     if puzzle2 is None:
