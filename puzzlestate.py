@@ -14,12 +14,27 @@ class Puzzlestate:
   operations on a crossword puzzle state
   """
 
-  # Directions are defined as (rowincrement,colincrement)
+  # Directions are defined as [rowincrement,colincrement]
 
   directions = {
     'Across': [0,1],
     'Down': [1,0]
   }
+
+#                     a  b  c  d    e  f  g  h    i  j  k  l  m  n    o
+  i_like_vowels = [ 180, 0, 0, 0, 180, 0, 0, 0, 180, 0, 0, 0, 0, 0, 180,
+                    0, 0, 0, 0, 0, 180, 0, 0, 0, 30, 0 ]
+#                   p  q  r  s  t    u  v  w  x   y  z
+
+#                 a    b    c    d  e    f    g    h  i    j    k    l    m    n  o
+  i_like_cons = [ 0, 100, 100, 150, 0, 100, 100, 100, 0, 100, 100, 130, 100, 160, 0,
+                    100, 30, 160, 160, 180, 0, 70, 100, 30, 30, 40 ]
+#                     p   q    r    s    t  u   v    w   x   y  z
+
+#                   a   b    c    d    e   f    g    h   i  j  k  l   m   n   o
+  i_like_finals = [ 80, 0, 100, 180, 160, 10, 170, 100, 10, 0, 0, 0, 50, 50, 50,
+                    50, 0, 80, 180, 80, 0, 0, 0, 0, 180, 0 ]
+#                    p  q   r    s   t  u  v  w  x    y  z
 
   letterpairfreqs = [
         [ 1, 20, 33, 52, 0, 12, 18, 5, 39, 1, 12, 57, 26, 181, 1, 20, 1, 75, 95, 104, 9, 20, 13, 1, 26, 1 ],
@@ -213,7 +228,10 @@ class Puzzlestate:
     if (rowno >= self.height() or colno >= self.width() or
         rowno < 0 or colno < 0):
       return '#'
-    return str(self._getchar(rowno,colno))
+    result = self._getchar(rowno,colno)
+    if type(result,int):
+      return '*'
+    return result
 
   def setchar(self,rowno,colno,c):
     rowno = int(rowno)
@@ -269,7 +287,7 @@ class Puzzlestate:
       with open(filename, 'w', encoding='utf-8') as f:
         json.dump(self.data, f, indent=2, sort_keys=True)
     except OSError:
-      raise RuntimeError('Could not write json to {}'.format(filename))
+      raise RuntimeError(f'Could not write json to {filename}') from None
     return self
 
   def writesvg(self,filename,**kwargs):
@@ -429,10 +447,10 @@ class Puzzlestate:
 
     # now we gather the constraints, i.e., letters already filled in
 
-    constraints = list()
+    constraints = []
     row,col = self.data['answerlocations'][cluenumber]
     if col >= self.width() or row >= self.height():
-      raise RuntimeError('answer location for {} {} is corrupt'.format(cluenumber,direction))
+      raise RuntimeError(f'answer location for {cluenumber} {direction} is corrupt')
 
     length = 0
     while True:
@@ -453,10 +471,10 @@ class Puzzlestate:
     # BOAT and BOOT lead to the same searchspace if the third character doesn't
     # matter
 
-    coldspots = list()
+    coldspots = []
     row,col = self.data['answerlocations'][cluenumber]
     if col >= self.width() or row >= self.height():
-      raise RuntimeError('answer location for {} {} is corrupt'.format(cluenumber,direction))
+      raise RuntimeError(f'answer location for {cluenumber} {direction} is corrupt')
     if direction == 'Across':
       port = lambda row,col: [ row-1, col ]
       starboard = lambda row,col: [ row+1, col ]
@@ -545,20 +563,42 @@ class Puzzlestate:
       raise RuntimeError(f'what kind of direction is {direction}')
 
     row,col = self.data['answerlocations'][cluenumber]
+
+    # is that first space an even space or an odd space?
+
+    if row % 2:
+      if col % 2: 
+        score_machine =  [lambda x: Puzzlestate.i_like_vowels[ord(x)-65] ,
+                          lambda x: Puzzlestate.i_like_cons[ord(x)-65] ]
+      else:
+        score_machine =  [lambda x: Puzzlestate.i_like_cons[ord(x)-65] ,
+                          lambda x: Puzzlestate.i_like_vowels[ord(x)-65] ]
+    else:
+      if col % 2: 
+        score_machine =  [lambda x: Puzzlestate.i_like_cons[ord(x)-65] ,
+                          lambda x: Puzzlestate.i_like_vowels[ord(x)-65] ]
+      else:
+        score_machine =  [lambda x: Puzzlestate.i_like_vowels[ord(x)-65] ,
+                          lambda x: Puzzlestate.i_like_cons[ord(x)-65] ]
+
     score = 0
-    for c in tryword:
+    for i,c in enumerate(tryword):
       predecessor = self.safe_getchar(*starboard(row,col))
       successor = self.safe_getchar(*port(row,col))
 
-      if predecessor == '#' and successor == '#':
-        # no preferences about this letter, since it's surrounded by borders!
+      if ( (predecessor == '#' and successor == '#') or
+           (predecessor == '*' and successor == '*') ):
+        if len(tryword) == i:
+          score += Puzzlestate.i_like_finals[ord(c)-65]
+        else:
+          score += score_machine[i % 2](c)       
         row += row_increment
         col += col_increment
         continue
-      if isinstance(predecessor,str) and predecessor.isalpha():
-        score += self.letterpairfreqs[ord(predecessor)-65][ord(c)-65]
       if isinstance(successor,str) and successor.isalpha():
         score += self.letterpairfreqs[ord(c)-65][ord(successor)-65]
+      elif isinstance(predecessor,str) and predecessor.isalpha():
+        score += self.letterpairfreqs[ord(predecessor)-65][ord(c)-65]
 
       row += row_increment
       col += col_increment
@@ -613,16 +653,16 @@ class Puzzlestate:
         c = self.getchar(rowno,colno)
         if c is None or c == '':
           print('0 ', end='')
-        elif type(c) == str:
+        elif isinstance(c,str):
           print(c, ' ', end='')
-        elif type(c) == int:
+        elif isinstance(c,int):
           print(c, "?", end='')
         else:
           print("¿ ", end='')
       print()
 
   def json(self):
-    return json.dumps(self.layout)
+    return json.dumps(self.data)
 
   def sparseness(self):
     size = self.height() * self.width()
@@ -639,14 +679,13 @@ def main():
     sourcefile = "puzzles/baby-animals-crossword.ipuz"
   else:
     sourcefile = sys.argv[1]
-  p = Puzzlestate.fromjsonfile(sourcefile)
-  print ("source file is {}".format(sourcefile))
-  print ("sparseness is {}".format(p.sparseness()))
+  puzzle = Puzzlestate.fromjsonfile(sourcefile)
+  print (f"source file is {sourcefile}")
+  print (f"sparseness is {puzzle.sparseness()}")
 
-  p.writesvg("{}.svg".format(sourcefile), showtitle=True)
-#  p.writejson("{}.ipuzout".format(sourcefile))
+  puzzle.writesvg(f"{sourcefile}.svg".format(sourcefile), showtitle=True)
+#  puzzle.writejson("f{sourcefile}.out.ipuz")
 
 if __name__ == '__main__':
-  """for testing"""
   random.seed()
   main()
