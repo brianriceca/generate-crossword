@@ -450,12 +450,19 @@ class Puzzlestate:
     if len(self.data['unsolved']) == 0:
       return None
 
-    thisclue = self.data['unsolved'].pop()
-    direction, cluenumber, length = thisclue
-    if direction not in Puzzlestate.directions.keys():
-      raise RuntimeError(f'{direction} is not a direction')
-    row_increment, col_increment = Puzzlestate.directions[direction]
 
+    try:
+      prevdirection, prevcluenumber = random.choice( self.data['solved_clues'] )
+      direction, cluenumber = random.choice( self.find_intersectors(prevdirection, prevcluenumber) )
+      length = self.data['answerlengths'][repr([ direction, cluenumber ])]
+    except IndexError:
+      thisclue = self.data['unsolved'].pop()
+      direction, cluenumber, length = thisclue
+      if direction not in Puzzlestate.directions.keys():
+        raise RuntimeError(f'{direction} is not a direction') from None
+
+    row_increment, col_increment = Puzzlestate.directions[direction]
+      
     # now we gather the constraints, i.e., letters already filled in
 
     constraints = []
