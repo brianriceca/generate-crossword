@@ -21,6 +21,9 @@ class Puzzlestate:
     'Down': [1,0]
   }
 
+  UNSOLVED = '.'
+  BARRIER = '#'
+
 #                     a  b  c  d    e  f  g  h    i  j  k  l  m  n    o
   i_like_vowels = [ 180, 0, 0, 0, 180, 0, 0, 0, 180, 0, 0, 0, 0, 0, 180,
                     0, 0, 0, 0, 0, 180, 0, 0, 0, 30, 0 ]
@@ -68,6 +71,8 @@ class Puzzlestate:
   class Letterkind:
     vowels = { 'A', 'E', 'I', 'O', 'U', 'Y'}
     safe_vowels = { *vowels, '#' }
+    # yes I know it would be cleaner to reference BARRIER rather than 
+    # a literal '#' but I ain't got time for that
     consonants = {
                'B', 'C', 'D', 'F', 'G', 'H',
                'J', 'K', 'L', 'M', 'N', 'P',
@@ -97,6 +102,11 @@ class Puzzlestate:
 
   @classmethod
   def fromjsonfile(cls,filename):
+    def _barrier_or_unsolved(row,col):
+      if data['puzzle'][row][col] == Puzzlestate.BARRIER:
+        return Puzzlestate.BARRIER
+      return Puzzlestate.UNSOLVED
+
     try:
       with open(filename,encoding='utf-8') as f:
         data = json.load(f)
@@ -133,7 +143,8 @@ class Puzzlestate:
       data['wordsused'] = set()
     if 'solution' not in data.keys():
       data['solution'] = \
-                  [[None for i in range(width)] for j in range(height)]
+                  [[_barrier_or_unsolved(j,i) 
+                     for i in range(width)] for j in range(height)]
     if 'answerlocations' not in data.keys():
       data['answerlocations'] = {}
     if 'answerlengths' not in data.keys():
@@ -170,7 +181,7 @@ class Puzzlestate:
           data['puzzle'][row][col] = int(cellcontents)
         elif isinstance(cellcontents,str) and cellcontents.isalpha():
           data['puzzle'][row][col] = data['puzzle'][row][col].toupper()
-        elif isinstance(cellcontents,str) and cellcontents == '#':
+        elif isinstance(cellcontents,str) and cellcontents == Puzzlestate.BARRIER:
           pass
         elif isinstance(cellcontents, dict):
           raise RuntimeError("I don't know how to deal with fancy cells yet")
@@ -188,14 +199,14 @@ class Puzzlestate:
         if data['puzzle'][xloc][yloc] != cluenumber[0]:
           raise RuntimeError(f"found a mismatch at ({xloc},{yloc}): expected {cluenumber}, saw {data['puzzle'][xloc][yloc]}")
       # now we count the number of blanks from the start of the clue, in the given direction,
-      # to the next '#' or boundary
+      # to the next BARRIER or boundary
 
         n = 1
         while True:
           xloc += Puzzlestate.directions[direction][0]
           yloc += Puzzlestate.directions[direction][1]
           if (xloc == width or yloc == height or
-              data['puzzle'][xloc][yloc] == '#'):
+              data['puzzle'][xloc][yloc] == Puzzlestate.BARRIER):
             break
           n += 1
 
@@ -227,10 +238,10 @@ class Puzzlestate:
   def safe_getchar(self,rowno,colno):
     if (rowno >= self.height() or colno >= self.width() or
         rowno < 0 or colno < 0):
-      return '#'
+      return BARRIER
     result = self._getchar(rowno,colno)
     if type(result,int):
-      return '*'
+      return UNSOLVED
     return result
 
   def setchar(self,rowno,colno,c):
@@ -263,7 +274,7 @@ class Puzzlestate:
       return True # Yay!  It's not been filled in yet
     if isinstance(c2,int):
       return True # It's either a 0 for an empty space or else a clue number
-    if isinstance(c2,str) and c2 in ('?', '*', ' ', '.'):
+    if isinstance(c2,str) and c2 == UNSOLVED:
       return True # Yay!  It's not been filled in yet
     if isinstance(c2,str) and c2.upper() == c.upper():
       return True # Yay! It's already the character we want.
@@ -380,7 +391,7 @@ class Puzzlestate:
     # insert black boxes
     for row in range(HEIGHT):
       for col in range(WIDTH):
-        if self.getchar(row,col) == '#':
+        if self.getchar(row,col) == Puzzlestate.BARRIER:
   #          print("drawing a box at x={}, y={}".format(
   #                                   col*CELLSIZE_MM+SIDE_MARGIN_MM,
   #                                   row*CELLSIZE_MM+TOP_MARGIN_MM
@@ -460,7 +471,7 @@ class Puzzlestate:
       c = self.getchar(row,col)
       if isinstance(c,str) and c.isalpha():
         constraints.append([length,c])
-      if isinstance(c,str) and c == '#':
+      if isinstance(c,str) and c == BARRIER:
         break
       row += row_increment
       col += col_increment
@@ -493,12 +504,12 @@ class Puzzlestate:
       if isinstance(c,str) and c.isalpha():
         # no preferences about this letter, since it's fixed!
         break
-      if isinstance(c,str) and c == '#':
+      if isinstance(c,str) and c == BARRIER:
         break
       p = self.safe_getchar(*starboard(row,col))
       n = self.safe_getchar(*port(row,col))
 
-      if p == '#' and n == '#':
+      if p == BARRIER and n == BARRIER:
         coldspots.append(i)
 
       row += row_increment
@@ -586,8 +597,8 @@ class Puzzlestate:
       predecessor = self.safe_getchar(*starboard(row,col))
       successor = self.safe_getchar(*port(row,col))
 
-      if ( (predecessor == '#' and successor == '#') or
-           (predecessor == '*' and successor == '*') ):
+      if ( (predecessor == BARRIER and successor == BARRIER) or
+           (predecessor == UNSOLVED and successor == UNSOLVED) ):
         if len(tryword) == i:
           score += Puzzlestate.i_like_finals[ord(c)-65]
         else:
@@ -664,9 +675,23 @@ class Puzzlestate:
   def json(self):
     return json.dumps(self.data)
 
+  def print_solution(self):
+    for rowno in range(self.height()):
+      for colno in range(self.width()):
+        c = self.data['solution'][rowno][colno]
+        if c is None or c == '':
+          print('0 ', end='')
+        elif isinstance(c,str):
+          print(c, ' ', end='')
+        elif isinstance(c,int):
+          print(c, "?", end='')
+        else:
+          print("¿ ", end='')
+      print()
+
   def sparseness(self):
     size = self.height() * self.width()
-    black_squares = sum ( [ sum ([ 1 for col in row if col == '#' ]) 
+    black_squares = sum ( [ sum ([ 1 for col in row if col == Puzzlestate.BARRIER ]) 
                                    for row in self.data['puzzle'] ] )
     if size == 0:
       raise RuntimeError("puzzle is size zero?")
