@@ -24,67 +24,33 @@ class Puzzlestate:
   UNSOLVED = '.'
   BARRIER = '#'
 
-#                     a  b  c  d    e  f  g  h    i  j  k  l  m  n    o
-  i_like_vowels = [ 180, 0, 0, 0, 180, 0, 0, 0, 180, 0, 0, 0, 0, 0, 180,
-                    0, 0, 0, 0, 0, 180, 0, 0, 0, 30, 0 ]
-#                   p  q  r  s  t    u  v  w  x   y  z
+  _fn = 'vowel_friendly_weightings.json'
+  try:
+    with open(_fn,encoding='utf-8') as f:
+      i_like_vowels = json.load(f)
+  except OSError:
+    raise RuntimeError(f'Could not read json from {_fn}')
 
-#                 a    b    c    d  e    f    g    h  i    j    k    l    m    n  o
-  i_like_cons = [ 0, 100, 100, 150, 0, 100, 100, 100, 0, 100, 100, 130, 100, 160, 0,
-                    100, 30, 160, 160, 180, 0, 70, 100, 30, 30, 40 ]
-#                     p   q    r    s    t  u   v    w   x   y  z
+  _fn = 'consonant_friendly_weightings.json'
+  try:
+    with open(_fn,encoding='utf-8') as f:
+      i_like_consonants = json.load(f)
+  except OSError:
+    raise RuntimeError(f'Could not read json from {_fn}')
 
-#                   a   b    c    d    e   f    g    h   i  j  k  l   m   n   o
-  i_like_finals = [ 80, 0, 100, 180, 160, 10, 170, 100, 10, 0, 0, 0, 50, 50, 50,
-                    50, 0, 80, 180, 80, 0, 0, 0, 0, 180, 0 ]
-#                    p  q   r    s   t  u  v  w  x    y  z
+  _fn = 'final_friendly_weightings.json'
+  try:
+    with open(_fn,encoding='utf-8') as f:
+      i_like_finals = json.load(f)
+  except OSError:
+    raise RuntimeError(f'Could not read json from {_fn}')
 
-  letterpairfreqs = [
-        [ 1, 20, 33, 52, 0, 12, 18, 5, 39, 1, 12, 57, 26, 181, 1, 20, 1, 75, 95, 104, 9, 20, 13, 1, 26, 1 ],
-        [ 11, 1, 0, 0, 47, 0, 0, 0, 6, 1, 0, 17, 0, 0, 19, 0, 0, 11, 2, 1, 21, 0, 0, 0, 11, 0 ],
-        [ 31, 0, 4, 0, 38, 0, 0, 38, 10, 0, 18, 9, 0, 0, 45, 0, 1, 11, 1, 15, 7, 0, 0, 0, 1, 0 ],
-        [ 48, 20, 9, 13, 57, 11, 7, 25, 50, 3, 1, 11, 14, 16, 41, 6, 0, 14, 35, 56, 10, 2, 19, 0, 10, 0 ],
-        [ 110, 23, 45, 126, 48, 30, 15, 33, 41, 3, 5, 55, 47, 111, 33, 28, 2, 169, 115, 83, 6, 24, 50, 9, 26, 0 ],
-        [ 25, 2, 3, 2, 20, 11, 1, 8, 23, 1, 0, 8, 5, 1, 40, 2, 0, 16, 5, 37, 8, 0, 3, 0, 2, 0 ],
-        [ 24, 3, 2, 2, 28, 3, 4, 35, 18, 1, 0, 7, 3, 4, 23, 1, 0, 12, 9, 16, 7, 0, 5, 0, 1, 0 ],
-        [ 114, 2, 2, 1, 302, 2, 1, 6, 97, 0, 0, 2, 3, 1, 49, 1, 0, 8, 5, 32, 8, 0, 4, 0, 4, 0 ],
-        [ 10, 5, 32, 33, 23, 17, 25, 6, 1, 1, 8, 37, 37, 179, 24, 6, 0, 27, 86, 93, 1, 14, 7, 2, 0, 2 ],
-        [ 2, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0  ],
-        [ 6, 1, 1, 1, 29, 1, 0, 2, 14, 0, 0, 2, 1, 9, 4, 0, 0, 0, 5, 4, 1, 0, 2, 0, 2, 0 ],
-        [ 40, 3, 2, 36, 64, 10, 1, 4, 47, 0, 3, 56, 4, 2, 41, 3, 0, 2, 11, 15, 8, 3, 5, 0, 31, 0 ],
-        [ 44, 7, 1, 1, 68, 2, 1, 3, 25, 0, 0, 1, 5, 2, 29, 11, 0, 3, 10, 1, 9, 8, 0, 4, 0, 18, 0 ],
-        [ 40, 7, 25, 146, 66, 8, 92, 16, 33, 2, 8, 9, 7, 8, 60, 4, 1, 3, 33, 106, 6, 2, 12, 0, 11, 0 ],
-        [ 16, 12, 13, 18, 5, 80, 7, 11, 12, 1, 13, 26, 48, 106, 36, 15, 0, 84, 28, 57, 115, 12, 46, 0, 5, 1 ],
-        [ 23, 1, 0, 0, 30, 1, 0, 3, 12, 0, 0, 15, 1, 0, 21, 10, 0, 18, 5, 11, 6, 0, 1, 0, 1, 0 ],
-        [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0  ],
-        [ 50, 7, 10, 20, 133, 8, 10, 12, 50, 1, 8, 10, 14, 16, 55, 6, 0, 14, 37, 42, 12, 4, 11, 0, 21, 0 ],
-        [ 67, 11, 17, 7, 74, 11, 4, 50, 49, 2, 6, 13, 12, 10, 57, 20, 2, 4, 43, 109, 20, 2, 24, 0, 4, 0 ],
-        [ 59, 10, 11, 7, 75, 9, 3, 330, 76, 1, 2, 17, 11, 7, 115, 4, 0, 28, 34, 56, 17, 1, 31, 0, 16, 0 ],
-        [ 7, 5, 12, 7, 7, 2, 14, 2, 8, 0, 1, 34, 8, 36, 1, 16, 0, 44, 35, 48, 0, 0, 2, 0, 1, 0 ],
-        [ 5, 0, 0, 0, 65, 0, 0, 0, 11, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0 ],
-        [ 66, 1, 1, 2, 39, 1, 0, 44, 39, 0, 0, 2, 1, 12, 29, 0, 0, 3, 4, 4, 1, 0, 2, 0, 1, 0 ],
-        [ 1, 0, 2, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0  ],
-        [ 18, 7, 6, 6, 14, 7, 3, 10, 11, 1, 1, 4, 6, 3, 36, 4, 0, 3, 19, 20, 1, 1, 12, 0, 2, 0 ],
-        [ 1, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  ]
-        ]
-
-  class Letterkind:
-    vowels = { 'A', 'E', 'I', 'O', 'U', 'Y'}
-    safe_vowels = { *vowels, '#' }
-    # yes I know it would be cleaner to reference BARRIER rather than 
-    # a literal '#' but I ain't got time for that
-    consonants = {
-               'B', 'C', 'D', 'F', 'G', 'H',
-               'J', 'K', 'L', 'M', 'N', 'P',
-               'R', 'S', 'T', 'V', 'W', 'X',
-               'Y', # yes Y is in both sets
-               'Z' }
-    safe_consonants = { *consonants, '#' }
-    terminals = { 'S', 'D', 'G' }
-    u = { 'U' }
-    h = { 'H' }
-    hpreceders = { 'C', 'G', 'S', 'T' }
-    hfollowers = { *vowels, 'R' }
+  _fn = 'letter_pair_freqs.json'
+  try:
+    with open(_fn,encoding='utf-8') as f:
+      letterpairfreqs = json.load(f)
+  except OSError:
+    raise RuntimeError(f'Could not read json from {_fn}')
 
   def __init__(self,data):
     self.data = data
@@ -96,8 +62,12 @@ class Puzzlestate:
     return cls( {"dimensions": {"height": int(height),
                                 "width": int(width)},
                  "wordsused": set(),
+                 "puzzle":
+                  [[Puzzlestate.UNSOLVED for i in range(width)]
+                    for j in range(height)] })
                  "solution":
-                  [[None for i in range(width)] for j in range(height)] })
+                  [[Puzzlestate.UNSOLVED for i in range(width)] 
+                    for j in range(height)] })
 
 
   @classmethod
@@ -113,6 +83,13 @@ class Puzzlestate:
     except OSError:
       raise RuntimeError(f'Could not read json from {filename}')
 
+    # all the validation happens here
+
+    if 'puzzle' not in data:
+      raise RuntimeError('this puzzle file lacks a puzzle')
+
+    if not isinstance(data['puzzle'], list):
+      raise RuntimeError('this puzzle file\'s puzzle is the wrong kind of data structure')
     if ('dimensions' not in data.keys() or
         'width' not in data['dimensions'].keys() or
         'height' not in data['dimensions'].keys()):
@@ -136,15 +113,32 @@ class Puzzlestate:
     if data['dimensions']['height'] <= 0:
       raise RuntimeError('height must be positive')
 
+    if len(data['puzzle']) != data['dimensions']['height']:
+      raise RuntimeError(f"puzzle should be {data['dimensions']['height']} rows high, is {len(data['puzzle'])}")
+
+    for rownumber, row in enumerate(data['puzzle']):
+      if not isinstance(row, list):
+        raise RuntimeError('this puzzle file\'s puzzle is the wrong kind of data structure')
+      if len(row) != width:
+        raise RuntimeError(f"puzzle row {rownumber} should be {data['dimensions']['width']} columns wide, is {len(row)}")
+
+    # now we start populating fields of the puzzle object
+
     width = int(data['dimensions']['width'])
     height = int(data['dimensions']['height'])
 
     if 'wordsused' not in data.keys():
       data['wordsused'] = set()
+
     if 'solution' not in data.keys():
-      data['solution'] = \
-                  [[_barrier_or_unsolved(j,i) 
-                     for i in range(width)] for j in range(height)]
+      for row in range(height):
+        for col in range(width):
+          if (type(data['puzzle'][row][col],int) or
+                   data['puzzle'][row][col] == Puzzlestate.UNSOLVED):
+            data['solution'] = Puzzlestate.UNSOLVED
+          else:
+            data['solution'][row][col] = chr(data['puzzle'][row][col])
+          
     if 'answerlocations' not in data.keys():
       data['answerlocations'] = {}
     if 'answerlengths' not in data.keys():
@@ -152,23 +146,8 @@ class Puzzlestate:
     if 'unsolved' not in data.keys():
       data['unsolved'] = []
 
-    # let's validate the puzzle and die if it is broken
-
-    if 'puzzle' not in data:
-      raise RuntimeError('this puzzle file lacks a puzzle')
-    if not isinstance(data['puzzle'], list):
-      raise RuntimeError('this puzzle file\'s puzzle is the wrong kind of data structure')
-
-    if len(data['puzzle']) != height:
-      raise RuntimeError(f"puzzle should be {height} columns high, is {len(data['puzzle'])}")
-
-    for rownumber, row in enumerate(data['puzzle']):
-      if not isinstance(row, list):
-        raise RuntimeError('this puzzle file\'s puzzle is the wrong kind of data structure')
-      if len(row) != width:
-        raise RuntimeError(f'puzzle row {rownumber} should be {width} wide, is {len(row)}')
-
     # squirrel away the clue locations; make sure any filled clues are uppercase
+
     for row in range(height):
       for col in range(width):
         cellcontents = data['puzzle'][row][col]
@@ -188,7 +167,11 @@ class Puzzlestate:
         else:
           raise RuntimeError(f"weird cell content: [{row},{col}] is {cellcontents}")
 
-    # now squirrel away the length of the answer for each clue
+    # now squirrel away the length of the answer for each clue,
+    # as well as, for each [row,col] all the clues that touch that space
+
+    clues_that_touch = [[ list() for i in range(width)]
+                    for j in range(height)] })
 
     for direction in data['clues']:
       if direction not in Puzzlestate.directions.keys():
@@ -198,8 +181,9 @@ class Puzzlestate:
         # [1] is the clue for a human solver, we don't care about that
         if data['puzzle'][xloc][yloc] != cluenumber[0]:
           raise RuntimeError(f"found a mismatch at ({xloc},{yloc}): expected {cluenumber}, saw {data['puzzle'][xloc][yloc]}")
-      # now we count the number of blanks from the start of the clue, in the given direction,
-      # to the next BARRIER or boundary
+
+      # now we count the number of blanks from the start of the clue, 
+      # in the given direction, to the next BARRIER or boundary
 
         n = 1
         while True:
