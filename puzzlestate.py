@@ -64,7 +64,7 @@ class Puzzlestate:
                  "wordsused": set(),
                  "puzzle":
                   [[Puzzlestate.UNSOLVED for i in range(width)]
-                    for j in range(height)] })
+                    for j in range(height)] ,
                  "solution":
                   [[Puzzlestate.UNSOLVED for i in range(width)] 
                     for j in range(height)] })
@@ -72,8 +72,8 @@ class Puzzlestate:
 
   @classmethod
   def fromjsonfile(cls,filename):
-    def _barrier_or_unsolved(row,col):
-      if data['puzzle'][row][col] == Puzzlestate.BARRIER:
+    def _barrier_or_unsolved(target,row,col):
+      if data[target][row][col] == Puzzlestate.BARRIER:
         return Puzzlestate.BARRIER
       return Puzzlestate.UNSOLVED
 
@@ -170,28 +170,29 @@ class Puzzlestate:
     # now squirrel away the length of the answer for each clue,
     # as well as, for each [row,col] all the clues that touch that space
 
-    clues_that_touch = [[ list() for i in range(width)]
-                    for j in range(height)] })
+    data['clues_that_touch'] = [[ set() for i in range(width)]
+                    for j in range(height)] 
 
     for direction in data['clues']:
       if direction not in Puzzlestate.directions.keys():
         raise RuntimeError(f"{direction} is not a direction")
       for cluenumber in data['clues'][direction]:
-        xloc,yloc = data['answerlocations'][cluenumber[0]]
+        row,col = data['answerlocations'][cluenumber[0]]
         # [1] is the clue for a human solver, we don't care about that
-        if data['puzzle'][xloc][yloc] != cluenumber[0]:
-          raise RuntimeError(f"found a mismatch at ({xloc},{yloc}): expected {cluenumber}, saw {data['puzzle'][xloc][yloc]}")
+        if data['puzzle'][row][col] != cluenumber[0]:
+          raise RuntimeError(f"found a mismatch at ({row},{col}): expected {cluenumber}, saw {data['puzzle'][row][col]}")
 
       # now we count the number of blanks from the start of the clue, 
       # in the given direction, to the next BARRIER or boundary
 
         n = 1
         while True:
-          xloc += Puzzlestate.directions[direction][0]
-          yloc += Puzzlestate.directions[direction][1]
-          if (xloc == width or yloc == height or
-              data['puzzle'][xloc][yloc] == Puzzlestate.BARRIER):
+          row += Puzzlestate.directions[direction][0]
+          col += Puzzlestate.directions[direction][1]
+          if (col == width or row == height or
+              data['puzzle'][row][col] == Puzzlestate.BARRIER):
             break
+          data['clues_that_touch'][row][col].add( [ direction, cluenumber[0] ] )
           n += 1
 
         data['answerlengths'][repr([ direction, cluenumber[0] ])] = n
@@ -222,10 +223,10 @@ class Puzzlestate:
   def safe_getchar(self,rowno,colno):
     if (rowno >= self.height() or colno >= self.width() or
         rowno < 0 or colno < 0):
-      return BARRIER
+      return Puzzlestate.BARRIER
     result = self._getchar(rowno,colno)
     if type(result,int):
-      return UNSOLVED
+      return Puzzlestate.UNSOLVED
     return result
 
   def setchar(self,rowno,colno,c):
@@ -258,7 +259,7 @@ class Puzzlestate:
       return True # Yay!  It's not been filled in yet
     if isinstance(c2,int):
       return True # It's either a 0 for an empty space or else a clue number
-    if isinstance(c2,str) and c2 == UNSOLVED:
+    if isinstance(c2,str) and c2 == Puzzlestate.UNSOLVED:
       return True # Yay!  It's not been filled in yet
     if isinstance(c2,str) and c2.upper() == c.upper():
       return True # Yay! It's already the character we want.
@@ -428,13 +429,26 @@ class Puzzlestate:
 
     drawing.save()
 
+  def intersecting_clues(self, cluenumber, direction):
+    intersections = set()
+    row, col = data['answerlocations'][cluenumber]
+    row_increment, col_increment = Puzzlestate.directions[direction]
+    while True:
+      if col == self.width() or row == self.height():
+        # remember, rows and cols are numbered from zero
+        break
+      for c,d in self.data['clues_that_touch'][row][col]:
+        if c != cluenumber or d != direction:
+          intersections.add( [c,d] )
+      row += row_increment   
+      col += col_increment   
+    return intersections
+
   def random_unsolved_clue(self):
     if 'unsolved' not in self.data:
       raise RuntimeError('missing unsolved data element')
     if len(self.data['unsolved']) == 0:
       return None
-
-
     try:
       prevdirection, prevcluenumber = random.choice( self.data['solved_clues'] )
       direction, cluenumber = random.choice( self.find_intersectors(prevdirection, prevcluenumber) )
@@ -588,8 +602,8 @@ class Puzzlestate:
       predecessor = self.safe_getchar(*starboard(row,col))
       successor = self.safe_getchar(*port(row,col))
 
-      if ( (predecessor == BARRIER and successor == BARRIER) or
-           (predecessor == UNSOLVED and successor == UNSOLVED) ):
+      if ( (predecessor == Puzzlestate.BARRIER and successor == Puzzlestate.BARRIER) or
+           (predecessor == Puzzlestate.UNSOLVED and successor == Puzzlestate.UNSOLVED) ):
         if len(tryword) == i:
           score += Puzzlestate.i_like_finals[ord(c)-65]
         else:
