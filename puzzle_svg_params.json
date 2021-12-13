@@ -7,7 +7,9 @@
     "offset_solution_y": 9,
     "block_color": "gray",
     "line_color": "gray",
-    "cluenumber_style": "font-size:2px; font-family:Times New Roman",
-    "solution_style": "font-size:8px; font-family:Arial",
-    "title_style": "font-size:8px; font-family:Times New Roman"
+    "line_width": 1,
+    "outer_line_style": "stroke-linecap: round;",
+    "cluenumber_style": "font-size:2px; font-family:Times New Roman;",
+    "solution_style": "font-size:8px; font-family:Arial;",
+    "title_style": "font-size:8px; font-family:Times New Roman;"
 }

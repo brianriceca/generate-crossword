@@ -318,111 +318,114 @@ class Puzzlestate:
       else:
         raise RuntimeError('titles need to be strings')
 
-    WIDTH=self.width()
-    HEIGHT=self.height()
-    CELLSIZE_MM=12
+    _fn = 'puzzle_svg_params.json'
+    try:
+      with open(_fn,encoding='utf-8') as f:
+        _s = json.load(f)
+    except OSError:
+      raise RuntimeError(f'Could not read json from {_fn}')
+
+    _w = self.width()
+    _h = self.height()
     if showtitle:
-      TITLEHEIGHT_MM = 14
+      pass
     else:
-      TITLEHEIGHT_MM = 0
-    TOP_MARGIN_MM = CELLSIZE_MM
-    BOTTOM_MARGIN_MM = CELLSIZE_MM
-    TOP_MARGIN_MM += TITLEHEIGHT_MM
-    SIDE_MARGIN_MM = CELLSIZE_MM
-    OFFSET_CLUENUM_X=1
-    OFFSET_CLUENUM_Y=3
-    OFFSET_SOLUTION_X=4
-    OFFSET_SOLUTION_Y=9
-    WIDTH_MM = CELLSIZE_MM*WIDTH+2*SIDE_MARGIN_MM
-    HEIGHT_MM = CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM+BOTTOM_MARGIN_MM
-    BLOCK_COLOR = 'gray'
-    LINE_COLOR = 'gray'
-    CLUENUMBER_STYLE = "font-size:2px; font-family:Times New Roman"
-    SOLUTION_STYLE = "font-size:8px; font-family:Arial"
-    TITLE_STYLE = "font-size:8px; font-family:Times New Roman"
+      _s['titleheight_mm'] = 0
 
-    PUZZLESIZE = (f"{WIDTH_MM}mm",f"{HEIGHT}mm")
+    _s['top_margin_mm'] = _s['cellsize_mm'] + _s['titleheight_mm']
+    _s['bottom_margin_mm'] = _s['cellsize_mm']
+    _s['side_margin_mm'] = _s['cellsize_mm']
 
-    drawing = svgwrite.Drawing(filename, size=PUZZLESIZE)
-    drawing.viewbox(0, 0, HEIGHT_MM, WIDTH_MM)
+    _s['width_mm'] = _s['cellsize_mm']*_w + 2*_s['side_margin_mm']
+    _s['height_mm'] = (_s['cellsize_mm']*_h + 
+                       _s['top_margin_mm'] +
+                       _s['bottom_margin_mm'])
 
-    # draw horizontal lines
-    for i in range(1,HEIGHT):
-      y = TOP_MARGIN_MM + i * CELLSIZE_MM
-      drawing.add(drawing.line(start=(SIDE_MARGIN_MM, y), end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, y),
-                 stroke=LINE_COLOR,stroke_width=1))
-    drawing.add(drawing.line(start=(SIDE_MARGIN_MM,
-                            TOP_MARGIN_MM+HEIGHT*CELLSIZE_MM),
-                     end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM,
-                          TOP_MARGIN_MM+HEIGHT*CELLSIZE_MM),
-                  stroke=LINE_COLOR,stroke_width=1, style='stroke-linecap: round;'))
-    drawing.add(drawing.line(start=(SIDE_MARGIN_MM, TOP_MARGIN_MM),
-                     end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, TOP_MARGIN_MM),
-                  stroke=LINE_COLOR,stroke_width=1, style='stroke-linecap: round;'))
+    drawing = svgwrite.Drawing(filename, 
+              size=(f"{_s['width_mm']}mm",f"{_s['height_mm']}mm"))
+    drawing.viewbox(0, 0, _s['height_mm'], _s['width_mm'])
+
+    # draw interior horizontal lines
+    for i in range(1,_s['height']):
+      y = _s['top_margin_mm'] + i * _s['cellsize_mm']
+      drawing.add(drawing.line(
+                          start=(_s['side_margin_mm'], y), 
+                          end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], y),
+                          stroke=_s['line_color'],stroke_width=_s['line_width']))
+
+    # draw top and bottom lines
+    drawing.add(drawing.line(
+                        start=(_s['side_margin_mm'], _s['top_margin_mm']+_s['height']*_s['cellsize_mm']),
+                        end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], _s['top_margin_mm']+_s['height']*_s['cellsize_mm']),
+                        stroke=_s['line_color'],stroke_width=_s['line_width'], style=_s['outer_line_style']))
+
+    drawing.add(drawing.line(
+                        start=(_s['side_margin_mm'], _s['top_margin_mm']),
+                        end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], _s['top_margin_mm']),
+                        stroke=_s['line_color'],stroke_width=_s['line_width'], style=_s['outer_line_style']))
 
     # draw vertical lines
-    for i in range(1,WIDTH):
-      x = SIDE_MARGIN_MM + i * CELLSIZE_MM
-  #      print("vertical line from ({},{}) to ({},{})".format(x,TOP_MARGIN_MM, x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM))
-      drawing.add(drawing.line(start=(x,TOP_MARGIN_MM), end=(x, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
-                  stroke=LINE_COLOR,stroke_width=1))
-    drawing.add(drawing.line(start=(SIDE_MARGIN_MM,TOP_MARGIN_MM), end=(SIDE_MARGIN_MM, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
-                stroke=LINE_COLOR,stroke_width=1,style='stroke-linecap: round;'))
-    drawing.add(drawing.line(start=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM,TOP_MARGIN_MM), end=(CELLSIZE_MM*WIDTH+SIDE_MARGIN_MM, CELLSIZE_MM*HEIGHT+TOP_MARGIN_MM),
-                stroke=LINE_COLOR,stroke_width=1,style='stroke-linecap: round;'))
+    for i in range(1,_w):
+      x = _s['side_margin_mm'] + i * _s['cellsize_mm']
+      drawing.add(drawing.line(
+                          start=(x,_s['top_margin_mm']), 
+                          end=(x,_s['cellsize_mm']*_s['height']+_s['top_margin_mm']),
 
+                          stroke=_s['line_color'],stroke_width=_s['line_width']))
+
+    drawing.add(drawing.line(
+                        start=(_s['side_margin_mm'],_s['top_margin_mm']),
+                        end=(_s['side_margin_mm'], _s['cellsize_mm']*_h'+_s['top_margin_mm']),
+                        stroke=LINE_COLOR,stroke_width=1,style=_s['outer_line_style']))
+    drawing.add(drawing.line(
+                        start=(_s['cellsize_mm']*_w+_s['side_margin_mm'],_s['top_margin_mm']), 
+                        end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], _s['cellsize_mm']*_h + _s['top_margin_mm']),
+                        stroke=_s['line_color'],stroke_width=_s['line_width'],style=_s['outer_line_style']))
 
 
     # insert black boxes
-    for row in range(HEIGHT):
-      for col in range(WIDTH):
+    for row in range(_h):
+      for col in range(_w):
         if self.getchar(row,col) == Puzzlestate.BARRIER:
-  #          print("drawing a box at x={}, y={}".format(
-  #                                   col*CELLSIZE_MM+SIDE_MARGIN_MM,
-  #                                   row*CELLSIZE_MM+TOP_MARGIN_MM
-  #                                  ))
-          drawing.add(drawing.rect(insert=(
-                                   col*CELLSIZE_MM+SIDE_MARGIN_MM,
-                                   row*CELLSIZE_MM+TOP_MARGIN_MM
+          drawing.add(drawing.rect(
+                           insert=(
+                                   col*_s['cellsize_mm']+_s['side_margin_mm'],
+                                   row*_s['cellsize_mm']+_s['top_margin_mm']
                                   ),
-                           size=(CELLSIZE_MM,CELLSIZE_MM),
-                           fill=BLOCK_COLOR))
+                           size=(_s['cellsize_mm'],_s['cellsize_mm']),
+                           fill=_s['block_color']))
 
     if showcluenumbers:
-      g = drawing.g(class_='cluenumber',style = CLUENUMBER_STYLE)
+      g = drawing.g(class_='cluenumber',style = _s['cluenumber_style'])
       for answer in self.data['answerlocations'].keys():
         row,col = self.data['answerlocations'][answer]
-  #        print("writing a clue number at x={}, y={}".format(
-  #                            col*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_CLUENUM_X,
-  #                            row*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_CLUENUM_Y,
-  #                           ))
 
         g.add(drawing.text(answer,
                     insert=(
-                            col*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_CLUENUM_X,
-                            row*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_CLUENUM_Y,
+                            col*_s['cellsize_mm']+_s['side_margin_mm']+_s['offset_cluenum_x'],
+                            row*_s['cellsize_mm']+_s['top_margin_mm']+_s['offset_cluenum_y'],
                            )))
       drawing.add(g)
 
     if showsolvedcells:
-      g = drawing.g(class_='solvedcell', style = SOLUTION_STYLE)
-      for row in range(HEIGHT):
-        for col in range(WIDTH):
+      g = drawing.g(class_='solvedcell', style = _s['solution_style'])
+      for row in range(_h):
+        for col in range(_w):
           c = self.getchar(row,col)
           if isinstance(c,str) and c.isalpha():
             g.add(drawing.text(self.getchar(row,col),
                     insert=(
-                            col*CELLSIZE_MM+SIDE_MARGIN_MM+OFFSET_SOLUTION_X,
-                            row*CELLSIZE_MM+TOP_MARGIN_MM+OFFSET_SOLUTION_Y,
+                            col*_s['cellsize_mm']+_s['side_margin_mm']+_s['offset_solution_x'],
+                            row*_s['cellsize_mm']+_s['top_margin_mm']+_s['offset_solution_y'],
                            )))
       drawing.add(g)
 
     if showtitle:
-      g = drawing.g(class_='title', style = TITLE_STYLE)
+      g = drawing.g(class_='title', style = _s['title_style'])
       g.add(drawing.text(title,
                     insert=(
-                            SIDE_MARGIN_MM,
-                            TITLEHEIGHT_MM
+                            _s['side_margin_mm'],
+                            _s['title_height_mm']
                            )))
       drawing.add(g)
 
