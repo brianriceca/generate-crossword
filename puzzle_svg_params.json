@@ -1,0 +1,13 @@
+{ 
+    "cellsize_mm": 12,
+    "titleheight_mm": 14,
+    "offset_cluenum_x": 1,
+    "offset_cluenum_y": 3,
+    "offset_solution_x": 4,
+    "offset_solution_y": 9,
+    "block_color": "gray",
+    "line_color": "gray",
+    "cluenumber_style": "font-size:2px; font-family:Times New Roman",
+    "solution_style": "font-size:8px; font-family:Arial",
+    "title_style": "font-size:8px; font-family:Times New Roman"
+}
