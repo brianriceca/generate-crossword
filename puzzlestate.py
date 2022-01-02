@@ -106,7 +106,7 @@ class Puzzlestate:
     for rownumber, row in enumerate(data['puzzle']):
       if not isinstance(row, list):
         raise RuntimeError('this puzzle file\'s puzzle is the wrong kind of data structure')
-      if len(row) != width:
+      if len(row) != data['dimensions']['width']:
         raise RuntimeError(f"puzzle row {rownumber} should be {data['dimensions']['width']} columns wide, is {len(row)}")
 
     # now we start populating fields of the puzzle object
@@ -118,13 +118,15 @@ class Puzzlestate:
       data['wordsused'] = set()
 
     if 'solution' not in data.keys():
+      data['solution'] = [[Puzzlestate.UNSOLVED for i in range(width)] 
+                    for j in range(height)]
       for row in range(height):
         for col in range(width):
-          if (type(data['puzzle'][row][col],int) or
+          if (isinstance(data['puzzle'][row][col],int) or
                    data['puzzle'][row][col] == Puzzlestate.UNSOLVED):
             data['solution'] = Puzzlestate.UNSOLVED
           else:
-            data['solution'][row][col] = chr(data['puzzle'][row][col])
+            data['solution'][row][col] = str(data['puzzle'][row][col])
           
     if 'answerlocations' not in data.keys():
       data['answerlocations'] = {}
