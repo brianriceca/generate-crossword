@@ -14,6 +14,15 @@ class Puzzlestate:
   operations on a crossword puzzle state
   """
 
+  def _slurpjson(fn):
+    result = dict()
+    try:
+      with open(fn,encoding='utf-8') as f:
+         result = json.load(f)
+    except OSError:
+      raise RuntimeError(f'Could not read json from {_fn}')
+    return result
+ 
   # Directions are defined as [rowincrement,colincrement]
 
   directions = {
@@ -24,33 +33,11 @@ class Puzzlestate:
   UNSOLVED = '.'
   BARRIER = '#'
 
-  _fn = 'vowel_friendly_weightings.json'
-  try:
-    with open(_fn,encoding='utf-8') as f:
-      i_like_vowels = json.load(f)
-  except OSError:
-    raise RuntimeError(f'Could not read json from {_fn}')
-
-  _fn = 'consonant_friendly_weightings.json'
-  try:
-    with open(_fn,encoding='utf-8') as f:
-      i_like_consonants = json.load(f)
-  except OSError:
-    raise RuntimeError(f'Could not read json from {_fn}')
-
-  _fn = 'final_friendly_weightings.json'
-  try:
-    with open(_fn,encoding='utf-8') as f:
-      i_like_finals = json.load(f)
-  except OSError:
-    raise RuntimeError(f'Could not read json from {_fn}')
-
-  _fn = 'letter_pair_freqs.json'
-  try:
-    with open(_fn,encoding='utf-8') as f:
-      letterpairfreqs = json.load(f)
-  except OSError:
-    raise RuntimeError(f'Could not read json from {_fn}')
+  i_like_vowels = _slurpjson('vowel_friendly_weightings.json')
+  i_like_cons = _slurpjson('consonant_friendly_weightings.json')
+  i_like_finals = _slurpjson('final_friendly_weightings.json')
+  letterpairfreqs = _slurpjson('letter_pair_freqs.json')
+  singleletterfreqs = _slurpjson('single_letter_weightings.json')
 
   def __init__(self,data):
     self.data = data
@@ -375,7 +362,7 @@ class Puzzlestate:
 
     drawing.add(drawing.line(
                         start=(_s['side_margin_mm'],_s['top_margin_mm']),
-                        end=(_s['side_margin_mm'], _s['cellsize_mm']*_h'+_s['top_margin_mm']),
+                        end=(_s['side_margin_mm'], _s['cellsize_mm']*_h+_s['top_margin_mm']),
                         stroke=LINE_COLOR,stroke_width=1,style=_s['outer_line_style']))
     drawing.add(drawing.line(
                         start=(_s['cellsize_mm']*_w+_s['side_margin_mm'],_s['top_margin_mm']), 
