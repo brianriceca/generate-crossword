@@ -118,15 +118,11 @@ class Puzzlestate:
       data['wordsused'] = set()
 
     if 'solution' not in data.keys():
-      data['solution'] = [[Puzzlestate.UNSOLVED for i in range(width)] 
-                    for j in range(height)]
+      data['solution'] = copy.deepcopy(data['puzzle'])
       for row in range(height):
         for col in range(width):
-          if (isinstance(data['puzzle'][row][col],int) or
-                   data['puzzle'][row][col] == Puzzlestate.UNSOLVED):
+          if (isinstance(data['puzzle'][row][col],int)):
             data['solution'] = Puzzlestate.UNSOLVED
-          else:
-            data['solution'][row][col] = str(data['puzzle'][row][col])
           
     if 'answerlocations' not in data.keys():
       data['answerlocations'] = {}
