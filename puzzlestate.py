@@ -8,6 +8,9 @@ import json
 import copy
 import sys
 import svgwrite
+import os
+
+script_folder = os.path.dirname(os.path.realpath(__file__))
 
 class Puzzlestate:
   """
@@ -16,6 +19,10 @@ class Puzzlestate:
 
   def _slurpjson(fn):
     result = dict()
+    if os.path.isabs(fn):
+      pass
+    else:
+      fn = os.path.join(script_folder,fn)
     try:
       with open(fn,encoding='utf-8') as f:
          result = json.load(f)
@@ -177,7 +184,9 @@ class Puzzlestate:
           if (col == width or row == height or
               data['puzzle'][row][col] == Puzzlestate.BARRIER):
             break
-          data['clues_that_touch'][row][col].add( [ direction, cluenumber[0] ] )
+          data['clues_that_touch'][row][col].add( 
+                                     ( direction, cluenumber[0] )
+                                              )
           n += 1
 
         data['answerlengths'][repr([ direction, cluenumber[0] ])] = n
@@ -196,9 +205,7 @@ class Puzzlestate:
     return self.width()
 
   def _getchar(self,rowno,colno):
-    if self.data["solution"][rowno][colno] is not None:
-      return self.data["solution"][rowno][colno]
-    return self.data["puzzle"][rowno][colno]
+    return self.data["solution"][rowno][colno]
 
   def getchar(self,rowno,colno):
     if rowno >= self.height() or colno >= self.width():
@@ -331,7 +338,7 @@ class Puzzlestate:
     drawing.viewbox(0, 0, _s['height_mm'], _s['width_mm'])
 
     # draw interior horizontal lines
-    for i in range(1,_s['height']):
+    for i in range(1,_h):
       y = _s['top_margin_mm'] + i * _s['cellsize_mm']
       drawing.add(drawing.line(
                           start=(_s['side_margin_mm'], y), 
@@ -340,8 +347,8 @@ class Puzzlestate:
 
     # draw top and bottom lines
     drawing.add(drawing.line(
-                        start=(_s['side_margin_mm'], _s['top_margin_mm']+_s['height']*_s['cellsize_mm']),
-                        end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], _s['top_margin_mm']+_s['height']*_s['cellsize_mm']),
+                        start=(_s['side_margin_mm'], _s['top_margin_mm']+_h*_s['cellsize_mm']),
+                        end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], _s['top_margin_mm']+_h*_s['cellsize_mm']),
                         stroke=_s['line_color'],stroke_width=_s['line_width'], style=_s['outer_line_style']))
 
     drawing.add(drawing.line(
@@ -354,14 +361,14 @@ class Puzzlestate:
       x = _s['side_margin_mm'] + i * _s['cellsize_mm']
       drawing.add(drawing.line(
                           start=(x,_s['top_margin_mm']), 
-                          end=(x,_s['cellsize_mm']*_s['height']+_s['top_margin_mm']),
+                          end=(x,_s['cellsize_mm']*_h+_s['top_margin_mm']),
 
                           stroke=_s['line_color'],stroke_width=_s['line_width']))
 
     drawing.add(drawing.line(
                         start=(_s['side_margin_mm'],_s['top_margin_mm']),
                         end=(_s['side_margin_mm'], _s['cellsize_mm']*_h+_s['top_margin_mm']),
-                        stroke=LINE_COLOR,stroke_width=1,style=_s['outer_line_style']))
+                        stroke=_s['line_color'],stroke_width=1,style=_s['outer_line_style']))
     drawing.add(drawing.line(
                         start=(_s['cellsize_mm']*_w+_s['side_margin_mm'],_s['top_margin_mm']), 
                         end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], _s['cellsize_mm']*_h + _s['top_margin_mm']),
