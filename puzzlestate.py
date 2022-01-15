@@ -32,6 +32,12 @@ class Puzzlestate:
  
   # Directions are defined as [rowincrement,colincrement]
 
+  def _cluestick(**kwargs):
+      if ('direction' not in kwargs or
+          'cluenumber' not in kwargs):
+      raise RuntimeError(f'This is not a proper clue: {repr(kwargs)}')
+    return str(cluenumber) + ' ' + direction
+
   directions = {
     'Across': [0,1],
     'Down': [1,0]
@@ -140,12 +146,8 @@ class Puzzlestate:
       data['answerlengths'] = {}
     if 'unsolved' not in data.keys():
       data['unsolved'] = []
-
-    if 'clues_denested' not in data.keys():
-      data['clues_denested'] = {}
-      for direction in data['clues']:
-        for cluenumber,humanclue in data['clues'][direction]:
-          data['clues_denested'][str(cluenumber) + ' ' + direction] = humanclue
+    if 'clues_expanded' not in data.keys():
+      data['clues_expanded'] = {}
 
     # squirrel away the clue locations; make sure any filled clues are uppercase
 
@@ -204,6 +206,15 @@ class Puzzlestate:
 
         data['answerlengths'][repr([ direction, cluenumber[0] ])] = n
         data['unsolved'].append( [ direction, cluenumber[0], n ] )
+
+        for d in data['clues']:
+          for cno,clue in data['clues'][direction]:
+            data['clues_expanded'][_cluestick(cluenumber=cno,direction=d)] = [
+              clue,
+                
+            
+            data['clues_denested'][str(cluenumber) + ' ' + direction] = humanclue
+
 
     return cls(data)
 
