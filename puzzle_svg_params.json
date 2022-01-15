@@ -6,6 +6,7 @@
     "offset_solution_x": 4,
     "offset_solution_y": 9,
     "block_color": "gray",
+    "highlight_color": "pink",
     "line_color": "gray",
     "line_width": 1,
     "outer_line_style": "stroke-linecap: round;",

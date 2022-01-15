@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+!#/usr/bin/env python3
 """
 operations on a crossword puzzle state
 """
@@ -82,6 +82,9 @@ class Puzzlestate:
     if 'puzzle' not in data:
       raise RuntimeError('this puzzle file lacks a puzzle')
 
+    if 'clues' not in data:
+      raise RuntimeError('this puzzle file lacks clues')
+
     if not isinstance(data['puzzle'], list):
       raise RuntimeError('this puzzle file\'s puzzle is the wrong kind of data structure')
     if ('dimensions' not in data.keys() or
@@ -138,6 +141,12 @@ class Puzzlestate:
     if 'unsolved' not in data.keys():
       data['unsolved'] = []
 
+    if 'clues_denested' not in data.keys():
+      data['clues_denested'] = {}
+      for direction in data['clues']:
+        for cluenumber,humanclue in data['clues'][direction]:
+          data['clues_denested'][str(cluenumber) + ' ' + direction] = humanclue
+
     # squirrel away the clue locations; make sure any filled clues are uppercase
 
     for row in range(height):
@@ -164,6 +173,10 @@ class Puzzlestate:
 
     data['clues_that_touch'] = [[ set() for i in range(width)]
                     for j in range(height)] 
+
+    data['cells_in_clue'] = dict()
+    for clue in self.data['clues']
+    data['cells_in_clue']
 
     for direction in data['clues']:
       if direction not in Puzzlestate.directions.keys():
@@ -193,6 +206,10 @@ class Puzzlestate:
         data['unsolved'].append( [ direction, cluenumber[0], n ] )
 
     return cls(data)
+
+#####################
+# OK, that's all the constructors
+#####################
 
   def height(self):
     return self.data["dimensions"]["height"]
@@ -286,19 +303,32 @@ class Puzzlestate:
       if isinstance(kwargs['showcluenumbers'], bool):
         showcluenumbers = kwargs['showcluenumbers']
       else:
-        raise RuntimeError('writesvg keyword args need True or False')
+        raise RuntimeError('showcluenumbers arg must be True or False')
 
     if 'showsolvedcells' in kwargs:
       if isinstance(kwargs['showsolvedcells'], bool):
         showsolvedcells = kwargs['showsolvedcells']
       else:
-        raise RuntimeError('writesvg keyword args need True or False')
+        raise RuntimeError('showsolvedcells arg must be True or False')
 
     if 'showtitle' in kwargs:
       if isinstance(kwargs['showtitle'], bool):
         showtitle = kwargs['showtitle']
       else:
-        raise RuntimeError('writesvg keyword args need True or False')
+        raise RuntimeError('showsolvedcells arg must be True or False')
+
+    if 'highlight_box' in kwargs:
+      if not isinstance(kwargs['highlight_box'], tuple):
+        raise RuntimeError('highlight_answer arg must be a tuple')         
+      direction, cluenumber = kwargs['highlight_box]
+      if direction not in Puzzlestate.direction.keys():
+        raise RuntimeError(f'alleged direction {direction} is not one of {Puzzlestate.direction.keys()}')         
+
+    if 'text_below_puzzle' in kwargs:
+      if isinstance(kwargs['text_below_puzzle'], str):
+        text_below_puzzle = kwargs['text_below_puzzle']
+      else:                                                                     
+        raise RuntimeError('text_below_puzzle arg must be a str')         
 
     title = self.gettitle()
     if title is None or title == '':
@@ -386,6 +416,15 @@ class Puzzlestate:
                                   ),
                            size=(_s['cellsize_mm'],_s['cellsize_mm']),
                            fill=_s['block_color']))
+    # insert highlights 
+    for row,col in self.list_cells_in_clue(direction,cluenumber):
+      drawing.add(drawing.rect(
+                           insert=(
+                                   col*_s['cellsize_mm']+_s['side_margin_mm'],
+                                   row*_s['cellsize_mm']+_s['top_margin_mm']
+                                  ),
+                           size=(_s['cellsize_mm'],_s['cellsize_mm']),
+                           fill=_s['highlight_color']))
 
     if showcluenumbers:
       g = drawing.g(class_='cluenumber',style = _s['cluenumber_style'])
