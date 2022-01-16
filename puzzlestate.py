@@ -1,4 +1,4 @@
-!#/usr/bin/env python3
+#!/usr/bin/env python3
 """
 operations on a crossword puzzle state
 """
@@ -41,10 +41,11 @@ class Puzzlestate:
   # Directions are defined as [rowincrement,colincrement]
 
   def _cluestick(**kwargs):
-      if ('direction' not in kwargs or
-          'cluenumber' not in kwargs):
+    if ('direction' not in kwargs or 'cluenumber' not in kwargs):
       raise RuntimeError(f'This is not a proper clue: {repr(kwargs)}')
     return str(cluenumber) + ' ' + direction
+  def _getaclue(s):
+    return s.split(s) 
 
   i_like_vowels = _slurpjson('vowel_friendly_weightings.json')
   i_like_cons = _slurpjson('consonant_friendly_weightings.json')
@@ -107,13 +108,13 @@ class Puzzlestate:
       if data['dimensions']['width'].isnumeric():
         data['dimensions']['width'] = int(data['dimensions']['width'])
       else:
-        raise RuntimeError(f"File {filename} invalid width {data['dimensions']['width']")
+        raise RuntimeError(f"File {filename} invalid width {data['dimensions']['width']}")
 
     if isinstance(data['dimensions']['height'],str):
       if data['dimensions']['height'].isnumeric():
         data['dimensions']['height'] = int(data['dimensions']['height'])
       else:
-        raise RuntimeError(f"File {filename} invalid height {data['dimensions']['height']")
+        raise RuntimeError(f"File {filename} invalid height {data['dimensions']['height']}")
         raise RuntimeError('invalid height')
 
     if data['dimensions']['width'] <= 0:
@@ -167,15 +168,16 @@ class Puzzlestate:
         if isinstance(cellcontents,int):
           # cool, no work to do, let's just confirm it's positive
           if cellcontents < 1:
-            raise RuntimeError('whoa, clue numbers must be positive')
+            raise RuntimeError(f'whoa, clue numbers must be positive, unlike [{row},{col}], which is {cellcontents}')
         elif isinstance(cellcontents,str):
           if cellcontents.isdigit():
             data['puzzle'][row][col] = int(cellcontents)
           else:
-            data['puzzle'][row][col] = data['puzzle'][row][col].toupper()
+            data['puzzle'][row][col] = data['puzzle'][row][col].upper()
         elif isinstance(cellcontents, dict):
           raise RuntimeError("I don't know how to deal with fancy cells yet")
-        else: raise RuntimeError(f"weird cell content: [{row},{col}] is {cellcontents}, type {type(cellcontents}")
+        else: 
+          raise RuntimeError(f"weird cell content: [{row},{col}] is {cellcontents}, type {type(cellcontents)}")
 
         data['answerlocations'][cellcontents] = [row,col]
 
@@ -198,33 +200,30 @@ class Puzzlestate:
         # in the given direction, to the next BARRIER or boundary
 
         n = 1
-        solution = ''
         while True:
-          solution = solution + _getchar('solution',row,col)
           row += Puzzlestate.directions[direction][0]
           col += Puzzlestate.directions[direction][1]
           if (col == width or row == height or
               data['puzzle'][row][col] == Puzzlestate.BARRIER):
             break
-          data['clues_that_touch_cell'][row][col].add(_cluestick(direction=direction, cluenumber=cluenumber )
+          data['clues_that_touch_cell'][row][col].add(_cluestick(direction=direction, cluenumber=cluenumber ))
           n += 1
 
         data['answerlengths'][_cluestick(direction=direction, cluenumber=cluenumber)] = n
         data['unsolved'].append(_cluestick(direction=direction, cluenumber=cluenumber))
 
     # now let's populate clues_expanded
+    # sample dict item:
+    # '1 Down': 'Launches', 5, [ '1 Across', '14 Across', '17 Across', '20 Across']
 
     for d in data['clues']:
       for cno,clue in data['clues'][direction]:
         data['clues_expanded'][_cluestick(cluenumber=cno,direction=d)] = [
               clue,
-              solution,
-              clues_that_touch_clue(_cluestick(cluenumber=cno,direction=d))
+              data['answerlengths'][_cluestick(direction=direction, cluenumber=cluenumber)],
+              data['clues_that_touch_clue'][_cluestick(cluenumber=cno,direction=d)]
             ]
                 
-            
-
-
     return cls(data)
 
 #####################
@@ -340,7 +339,7 @@ class Puzzlestate:
     if 'highlight_box' in kwargs:
       if not isinstance(kwargs['highlight_box'], tuple):
         raise RuntimeError('highlight_answer arg must be a tuple')         
-      direction, cluenumber = kwargs['highlight_box]
+      direction, cluenumber = _getaclue(kwargs['highlight_box'])
       if direction not in Puzzlestate.direction.keys():
         raise RuntimeError(f'alleged direction {direction} is not one of {Puzzlestate.direction.keys()}')         
 
