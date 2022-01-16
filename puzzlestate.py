@@ -217,11 +217,12 @@ class Puzzlestate:
     # '1 Down': 'Launches', 5, [ '1 Across', '14 Across', '17 Across', '20 Across']
 
     for d in data['clues']:
-      for cno,clue in data['clues'][direction]:
-        data['clues_expanded'][Puzzlestate._cluestick(cluenumber=cno,direction=d)] = [
-              clue,
-              data['answerlengths'][Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber)],
-              data['clues_that_touch_clue'][Puzzlestate._cluestick(cluenumber=cno,direction=d)]
+      for cno,humanclue in data['clues'][direction]:
+        myclue = Puzzlestate._cluestick(cluenumber=cno,direction=d)
+        data['clues_expanded'][myclue] = [
+              humanclue,
+              data['answerlengths'][myclue],
+              data['clues_that_touch_clue'][myclue]
             ]
                 
     return cls(data)
