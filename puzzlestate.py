@@ -172,9 +172,14 @@ class Puzzlestate:
             raise RuntimeError(f'whoa, clue numbers must be positive, unlike [{row},{col}], which is {cellcontents}')
           elif cellcontents == 0:
             cellcontents = Puzzlestate.UNSOLVED
+          else:
+            data['answerlocations'][int(cellcontents)] = [row,col]
         elif isinstance(cellcontents,str):
           if cellcontents.isdigit():
             data['puzzle'][row][col] = int(cellcontents)
+          elif (cellcontents == Puzzlestate.UNSOLVED or
+                cellcontents == Puzzlestate.BARRIER):
+            pass
           else:
             data['puzzle'][row][col] = data['puzzle'][row][col].upper()
         elif isinstance(cellcontents, dict):
@@ -182,7 +187,7 @@ class Puzzlestate:
         else: 
           raise RuntimeError(f"weird cell content: [{row},{col}] is {cellcontents}, type {type(cellcontents)}")
 
-        data['answerlocations'][cellcontents] = [row,col]
+
 
     # now squirrel away the length of the answer for each clue,
     # as well as, for each [row,col] all the clues that touch that space
