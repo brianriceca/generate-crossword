@@ -35,7 +35,7 @@ class Puzzlestate:
       with open(fn,encoding='utf-8') as f:
         result = json.load(f)
     except OSError:
-      raise RuntimeError(f'Could not read json from {_fn}')
+      raise RuntimeError(f'Could not read json from {fn}')
     return result
  
   # Directions are defined as [rowincrement,colincrement]
@@ -43,7 +43,7 @@ class Puzzlestate:
   def _cluestick(**kwargs):
     if ('direction' not in kwargs or 'cluenumber' not in kwargs):
       raise RuntimeError(f'This is not a proper clue: {repr(kwargs)}')
-    return str(cluenumber) + ' ' + direction
+    return str(kwargs['cluenumber']) + ' ' + kwargs['direction']
   def _getaclue(s):
     return s.split(s) 
 
@@ -206,11 +206,11 @@ class Puzzlestate:
           if (col == width or row == height or
               data['puzzle'][row][col] == Puzzlestate.BARRIER):
             break
-          data['clues_that_touch_cell'][row][col].add(_cluestick(direction=direction, cluenumber=cluenumber ))
+          data['clues_that_touch_cell'][row][col].add(Puzzlestate.Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber ))
           n += 1
 
-        data['answerlengths'][_cluestick(direction=direction, cluenumber=cluenumber)] = n
-        data['unsolved'].append(_cluestick(direction=direction, cluenumber=cluenumber))
+        data['answerlengths'][Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber)] = n
+        data['unsolved'].append(Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber))
 
     # now let's populate clues_expanded
     # sample dict item:
@@ -218,10 +218,10 @@ class Puzzlestate:
 
     for d in data['clues']:
       for cno,clue in data['clues'][direction]:
-        data['clues_expanded'][_cluestick(cluenumber=cno,direction=d)] = [
+        data['clues_expanded'][Puzzlestate._cluestick(cluenumber=cno,direction=d)] = [
               clue,
-              data['answerlengths'][_cluestick(direction=direction, cluenumber=cluenumber)],
-              data['clues_that_touch_clue'][_cluestick(cluenumber=cno,direction=d)]
+              data['answerlengths'][Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber)],
+              data['clues_that_touch_clue'][Puzzlestate._cluestick(cluenumber=cno,direction=d)]
             ]
                 
     return cls(data)
@@ -339,7 +339,7 @@ class Puzzlestate:
     if 'highlight_box' in kwargs:
       if not isinstance(kwargs['highlight_box'], tuple):
         raise RuntimeError('highlight_answer arg must be a tuple')         
-      direction, cluenumber = _getaclue(kwargs['highlight_box'])
+      direction, cluenumber = Puzzlestate._getaclue(kwargs['highlight_box'])
       if direction not in Puzzlestate.direction.keys():
         raise RuntimeError(f'alleged direction {direction} is not one of {Puzzlestate.direction.keys()}')         
 
@@ -484,7 +484,7 @@ class Puzzlestate:
 
   def intersecting_clues(self, cluenumber, direction):
     intersections = set()
-    row, col = data['answerlocations'][cluenumber]
+    row, col = self.data['answerlocations'][cluenumber]
     row_increment, col_increment = Puzzlestate.directions[direction]
     while True:
       if col == self.width() or row == self.height():
@@ -529,7 +529,7 @@ class Puzzlestate:
       c = self.getchar(row,col)
       if isinstance(c,str) and c.isalpha():
         constraints.append([length,c])
-      if isinstance(c,str) and c == BARRIER:
+      if isinstance(c,str) and c == Puzzlestate.BARRIER:
         break
       row += row_increment
       col += col_increment
@@ -562,12 +562,12 @@ class Puzzlestate:
       if isinstance(c,str) and c.isalpha():
         # no preferences about this letter, since it's fixed!
         break
-      if isinstance(c,str) and c == BARRIER:
+      if isinstance(c,str) and c == Puzzlestate.BARRIER:
         break
       p = self.safe_getchar(*starboard(row,col))
       n = self.safe_getchar(*port(row,col))
 
-      if p == BARRIER and n == BARRIER:
+      if p == Puzzlestate.BARRIER and n == Puzzlestate.BARRIER:
         coldspots.append(i)
 
       row += row_increment
