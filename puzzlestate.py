@@ -38,8 +38,6 @@ class Puzzlestate:
     except OSError:
       raise RuntimeError(f'Could not read json from {fn}')
     return result
- 
-  # Directions are defined as [rowincrement,colincrement]
 
   def _cluestick(**kwargs):
     if ('direction' not in kwargs or 'cluenumber' not in kwargs):
@@ -47,6 +45,8 @@ class Puzzlestate:
     return str(kwargs['cluenumber']) + ' ' + kwargs['direction']
   def _getaclue(s):
     return s.split(s) 
+ 
+  # Directions are defined as [rowincrement,colincrement]
 
   i_like_vowels = _slurpjson('vowel_friendly_weightings.json')
   i_like_cons = _slurpjson('consonant_friendly_weightings.json')
@@ -168,8 +168,10 @@ class Puzzlestate:
 
         if isinstance(cellcontents,int):
           # cool, no work to do, let's just confirm it's positive
-          if cellcontents < 1:
+          if cellcontents < 0:
             raise RuntimeError(f'whoa, clue numbers must be positive, unlike [{row},{col}], which is {cellcontents}')
+          elif cellcontents == 0:
+            cellcontents = Puzzlestate.UNSOLVED
         elif isinstance(cellcontents,str):
           if cellcontents.isdigit():
             data['puzzle'][row][col] = int(cellcontents)
@@ -496,19 +498,10 @@ class Puzzlestate:
     drawing.save()
 
   def intersecting_clues(self, cluenumber, direction):
-    intersections = set()
-    row, col = self.data['answerlocations'][cluenumber]
-    row_increment, col_increment = Puzzlestate.directions[direction]
-    while True:
-      if col == self.width() or row == self.height():
-        # remember, rows and cols are numbered from zero
-        break
-      for c,d in self.data['clues_that_touch_cell'][row][col]:
-        if c != cluenumber or d != direction:
-          intersections.add( [c,d] )
-      row += row_increment   
-      col += col_increment   
-    return intersections
+    return self.data['clues_that_touch_clue'][Puzzlestate._cluestick(
+                                            cluenumber=cluenumber,
+                                            direction=direction)]
+
 
   def random_unsolved_clue(self):
     if 'unsolved' not in self.data:
