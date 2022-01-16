@@ -33,7 +33,7 @@ class Puzzlestate:
       fn = os.path.join(script_folder,fn)
     try:
       with open(fn,encoding='utf-8') as f:
-         result = json.load(f)
+        result = json.load(f)
     except OSError:
       raise RuntimeError(f'Could not read json from {_fn}')
     return result
@@ -359,7 +359,7 @@ class Puzzlestate:
       else:
         raise RuntimeError('titles need to be strings')
 
-    _fn = 'puzzle_svg_params.json'
+    _fn = 'svg_params.json'
     try:
       with open(_fn,encoding='utf-8') as f:
         _s = json.load(f)
