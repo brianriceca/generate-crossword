@@ -23,7 +23,7 @@ def logit(how_much_to_indent,*args):
   msg = ' ' * how_much_to_indent + ' '.join(args)
   logging.info(msg)
 
-DEFAULT_PUZZLE = '/Users/brice/generate-crossword/puzzles/baby-animals-crossword.ipuz'
+DEFAULT_PUZZLE = '/Users/brice/generate-crossword/samplepuzzles/baby-animals-crossword.ipuz'
 DEFAULT_WORDSOURCE = 'english1020'
 
 def _mask_coldspots(tryword, coldspots):

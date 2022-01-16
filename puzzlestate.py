@@ -760,7 +760,7 @@ class Puzzlestate:
 def main():
   """for testing"""
   if len(sys.argv) == 1:
-    sourcefile = "puzzles/baby-animals-crossword.ipuz"
+    sourcefile = "samplepuzzles/baby-animals-crossword.ipuz"
   else:
     sourcefile = sys.argv[1]
   puzzle = Puzzlestate.fromjsonfile(sourcefile)
