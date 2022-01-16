@@ -105,6 +105,18 @@ class Puzzlestate:
         'height' not in data['dimensions'].keys()):
       raise RuntimeError(f'File {filename} missing puzzle dimension')
 
+    # the list of clues for each direction needs to be a dict, but unfortunately
+    # the JSON called for by the ipuz standard makes it a list, arrrgh
+
+    for d in Puzzlestate.directions:
+      if not isinstance(data['clues'][d],dict):
+        if not isinstance(data['clues'][d],list):
+          raise RuntimeError(f"File {filename} has a {d} clues element of type {type(data['clues'][d])}, which is bizarre")
+        clues2 = dict()
+      for item in data['clues'][d]:
+        clues2[item[0]] = item[1]
+        data['clues'][d] = clues2
+
     if isinstance(data['dimensions']['width'],str):
       if data['dimensions']['width'].isnumeric():
         data['dimensions']['width'] = int(data['dimensions']['width'])
@@ -173,10 +185,11 @@ class Puzzlestate:
           elif cellcontents == 0:
             cellcontents = Puzzlestate.UNSOLVED
           else:
-            data['answerlocations'][int(cellcontents)] = [row,col]
+            data['answerlocations'][cellcontents] = [row,col]
         elif isinstance(cellcontents,str):
           if cellcontents.isdigit():
             data['puzzle'][row][col] = int(cellcontents)
+            data['answerlocations'][int(cellcontents)] = [row,col]
           elif (cellcontents == Puzzlestate.UNSOLVED or
                 cellcontents == Puzzlestate.BARRIER):
             pass
@@ -186,8 +199,6 @@ class Puzzlestate:
           raise RuntimeError("I don't know how to deal with fancy cells yet")
         else: 
           raise RuntimeError(f"weird cell content: [{row},{col}] is {cellcontents}, type {type(cellcontents)}")
-
-
 
     # now squirrel away the length of the answer for each clue,
     # as well as, for each [row,col] all the clues that touch that space
@@ -199,7 +210,7 @@ class Puzzlestate:
     for direction in data['clues']:
       if direction not in Puzzlestate.directions.keys():
         raise RuntimeError(f"{direction} is not a direction")
-      for cluenumber,humanclue in data['clues'][direction]:
+      for cluenumber in data['clues'][direction].keys():
         row,col = data['answerlocations'][cluenumber]
         if data['puzzle'][row][col] != cluenumber:
           raise RuntimeError(f"found a mismatch at ({row},{col}): expected {cluenumber}, saw {data['puzzle'][row][col]}")
@@ -236,10 +247,10 @@ class Puzzlestate:
     # '1 Down': 'Launches', 5, [ '1 Across', '14 Across', '17 Across', '20 Across']
 
     for d in data['clues']:
-      for cno,humanclue in data['clues'][direction]:
+      for cno in data['clues'][d].keys():
         myclue = Puzzlestate._cluestick(cluenumber=cno,direction=d)
         data['clues_expanded'][myclue] = [
-              humanclue,
+              data['clues'][d][cno],
               data['answerlengths'][myclue],
               data['clues_that_touch_clue'][myclue]
             ]
