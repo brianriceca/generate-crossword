@@ -26,6 +26,12 @@ def logit(how_much_to_indent,*args):
 DEFAULT_PUZZLE = '/Users/brice/generate-crossword/samplepuzzles/baby-animals-crossword.ipuz'
 DEFAULT_WORDSOURCE = 'english1020'
 
+def _checkerboard(row,col):
+  if row % 2:
+    return col % 2
+  else:
+    return (col+1) % 2
+    
 def _mask_coldspots(tryword, coldspots):
   tryword_exploded = [ x for x in tryword ]
   for loc in coldspots:
