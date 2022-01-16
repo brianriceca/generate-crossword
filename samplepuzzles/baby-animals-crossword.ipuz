@@ -21,25 +21,25 @@
   ],
   "clues": {
     "Across": [
-      [2,"Sheep"],
-      [4,"Fish"],
-      [5,"Fox"],
-      [6,"Dog"],
-      [7,"Duck"],
-      [11,"Eagle"],
-      [12,"Bear"],
-      [14,"Deer"],
-      [15,"Kangaroo"]
+      [2,"Baby Sheep"],
+      [4,"Baby Fish"],
+      [5,"Baby Fox"],
+      [6,"Baby Dog"],
+      [7,"Baby Duck"],
+      [11,"Baby Eagle"],
+      [12,"Baby Bear"],
+      [14,"Baby Deer"],
+      [15,"Baby Kangaroo"]
     ],
     "Down": [
-      [1,"Horse"],
-      [3,"Rabbit"],
-      [5,"Goat"],
-      [6,"Pig"],
-      [8,"Chicken"],
-      [9,"Cow"],
-      [10,"Cat"],
-      [13,"Human"]
+      [1,"Baby Horse"],
+      [3,"Baby Rabbit"],
+      [5,"Baby Goat"],
+      [6,"Baby Pig"],
+      [8,"Baby Chicken"],
+      [9,"Baby Cow"],
+      [10,"Baby Cat"],
+      [13,"Baby Human"]
     ]
   },
   "unsolved": [
