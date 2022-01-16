@@ -9,6 +9,7 @@ import copy
 import sys
 import svgwrite
 import os
+from itertools import permutations
 
 script_folder = os.path.dirname(os.path.realpath(__file__))
 
@@ -206,12 +207,23 @@ class Puzzlestate:
           if (col == width or row == height or
               data['puzzle'][row][col] == Puzzlestate.BARRIER):
             break
-          data['clues_that_touch_cell'][row][col].add(Puzzlestate.Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber ))
+          data['clues_that_touch_cell'][row][col].add(Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber ))
           n += 1
 
         data['answerlengths'][Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber)] = n
         data['unsolved'].append(Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber))
+  
+    # now we have, for each cell, a set of clues that touch that cell
+    # let's transpose that into, for each clue, a set of (other) clues that touch
+    # that clue
 
+    for row in range(height):
+      for col in range(width):
+        for cluea,clueb in list(permutations(data['clues_that_touch_cell'][row][col],2)):
+          if cluea not in data['clues_that_touch_clue']:
+            data['clues_that_touch_clue'][cluea] = set()
+          data['clues_that_touch_clue'][cluea].add(clueb)
+    
     # now let's populate clues_expanded
     # sample dict item:
     # '1 Down': 'Launches', 5, [ '1 Across', '14 Across', '17 Across', '20 Across']
