@@ -17,6 +17,14 @@ class Puzzlestate:
   operations on a crossword puzzle state
   """
 
+  directions = {
+    'Across': [0,1],
+    'Down': [1,0]
+  }
+
+  UNSOLVED = '.'
+  BARRIER = '#'
+
   def _slurpjson(fn):
     result = dict()
     if os.path.isabs(fn):
@@ -38,14 +46,6 @@ class Puzzlestate:
       raise RuntimeError(f'This is not a proper clue: {repr(kwargs)}')
     return str(cluenumber) + ' ' + direction
 
-  directions = {
-    'Across': [0,1],
-    'Down': [1,0]
-  }
-
-  UNSOLVED = '.'
-  BARRIER = '#'
-
   i_like_vowels = _slurpjson('vowel_friendly_weightings.json')
   i_like_cons = _slurpjson('consonant_friendly_weightings.json')
   i_like_finals = _slurpjson('final_friendly_weightings.json')
@@ -63,16 +63,21 @@ class Puzzlestate:
                                 "width": int(width)},
                  "wordsused": set(),
                  "puzzle":
-                  [[Puzzlestate.UNSOLVED for i in range(width)]
-                    for j in range(height)] ,
+                  [[Puzzlestate.UNSOLVED for col in range(width)]
+                    for row in range(height)] ,
                  "solution":
-                  [[Puzzlestate.UNSOLVED for i in range(width)] 
-                    for j in range(height)] })
+                  [[Puzzlestate.UNSOLVED for col in range(width)] 
+                    for row in range(height)] })
 
 
   @classmethod
   def fromjsonfile(cls,filename):
     def _barrier_or_unsolved(target,row,col):
+      '''
+      can be called on 'puzzle' or 'solution'
+      the advantage if used on 'puzzle' is that it doesn't treat the first
+      cell of an answer as special (just because it has a number in it)
+      '''
       if data[target][row][col] == Puzzlestate.BARRIER:
         return Puzzlestate.BARRIER
       return Puzzlestate.UNSOLVED
@@ -86,13 +91,13 @@ class Puzzlestate:
     # all the validation happens here
 
     if 'puzzle' not in data:
-      raise RuntimeError('this puzzle file lacks a puzzle')
+      raise RuntimeError(f'File {filename} puzzle file lacks a puzzle')
 
     if 'clues' not in data:
-      raise RuntimeError('this puzzle file lacks clues')
+      raise RuntimeError(f'File {filename} lacks clues')
 
     if not isinstance(data['puzzle'], list):
-      raise RuntimeError('this puzzle file\'s puzzle is the wrong kind of data structure')
+      raise RuntimeError(f'File {filename} has a puzzle element w/ the wrong kind of data structure')
     if ('dimensions' not in data.keys() or
         'width' not in data['dimensions'].keys() or
         'height' not in data['dimensions'].keys()):
@@ -102,17 +107,17 @@ class Puzzlestate:
       if data['dimensions']['width'].isnumeric():
         data['dimensions']['width'] = int(data['dimensions']['width'])
       else:
-        raise RuntimeError('invalid width')
-
-    if data['dimensions']['width'] <= 0:
-      raise RuntimeError('width must be positive')
+        raise RuntimeError(f"File {filename} invalid width {data['dimensions']['width']")
 
     if isinstance(data['dimensions']['height'],str):
       if data['dimensions']['height'].isnumeric():
         data['dimensions']['height'] = int(data['dimensions']['height'])
       else:
+        raise RuntimeError(f"File {filename} invalid height {data['dimensions']['height']")
         raise RuntimeError('invalid height')
 
+    if data['dimensions']['width'] <= 0:
+      raise RuntimeError('width must be positive')
     if data['dimensions']['height'] <= 0:
       raise RuntimeError('height must be positive')
 
@@ -121,23 +126,25 @@ class Puzzlestate:
 
     for rownumber, row in enumerate(data['puzzle']):
       if not isinstance(row, list):
-        raise RuntimeError('this puzzle file\'s puzzle is the wrong kind of data structure')
+        raise RuntimeError(f'File {filename} \'s puzzle is the wrong kind of data structure')
       if len(row) != data['dimensions']['width']:
         raise RuntimeError(f"puzzle row {rownumber} should be {data['dimensions']['width']} columns wide, is {len(row)}")
 
-    # now we start populating fields of the puzzle object
+    # now we start populating other fields of the puzzle object
 
     width = int(data['dimensions']['width'])
     height = int(data['dimensions']['height'])
 
     if 'wordsused' not in data.keys():
-      data['wordsused'] = set()
+      data['wordsused'] = set()  
+      # TODO: detect the words in the solution, if any, and add them to the set
 
     if 'solution' not in data.keys():
       data['solution'] = copy.deepcopy(data['puzzle'])
       for row in range(height):
         for col in range(width):
           if (isinstance(data['puzzle'][row][col],int)):
+            # solution shouldn't have clue numbers in the first cell of answers
             data['solution'] = Puzzlestate.UNSOLVED
           
     if 'answerlocations' not in data.keys():
@@ -154,66 +161,68 @@ class Puzzlestate:
     for row in range(height):
       for col in range(width):
         cellcontents = data['puzzle'][row][col]
-        if isinstance(cellcontents,int) and cellcontents > 0:
-          data['answerlocations'][cellcontents] = [row,col]
-        elif isinstance(cellcontents,int):
-          pass
-        elif isinstance(cellcontents,str) and cellcontents.isdigit():
-          data['answerlocations'][int(cellcontents)] = [row,col]
-          data['puzzle'][row][col] = int(cellcontents)
-        elif isinstance(cellcontents,str) and cellcontents.isalpha():
-          data['puzzle'][row][col] = data['puzzle'][row][col].toupper()
-        elif isinstance(cellcontents,str) and cellcontents == Puzzlestate.BARRIER:
-          pass
+        # first, let's determine whether what's here is a clue number,
+        # and make sure it is an integer if it is
+
+        if isinstance(cellcontents,int):
+          # cool, no work to do, let's just confirm it's positive
+          if cellcontents < 1:
+            raise RuntimeError('whoa, clue numbers must be positive')
+        elif isinstance(cellcontents,str):
+          if cellcontents.isdigit():
+            data['puzzle'][row][col] = int(cellcontents)
+          else:
+            data['puzzle'][row][col] = data['puzzle'][row][col].toupper()
         elif isinstance(cellcontents, dict):
           raise RuntimeError("I don't know how to deal with fancy cells yet")
-        else:
-          raise RuntimeError(f"weird cell content: [{row},{col}] is {cellcontents}")
+        else: raise RuntimeError(f"weird cell content: [{row},{col}] is {cellcontents}, type {type(cellcontents}")
+
+        data['answerlocations'][cellcontents] = [row,col]
 
     # now squirrel away the length of the answer for each clue,
     # as well as, for each [row,col] all the clues that touch that space
 
-    data['clues_that_touch'] = [[ set() for i in range(width)]
+    data['clues_that_touch_cell'] = [[ set() for i in range(width)]
                     for j in range(height)] 
-
-    data['cells_in_clue'] = dict()
-    for clue in self.data['clues']
-    data['cells_in_clue']
+    data['clues_that_touch_clue'] = dict()
 
     for direction in data['clues']:
       if direction not in Puzzlestate.directions.keys():
         raise RuntimeError(f"{direction} is not a direction")
-      for cluenumber in data['clues'][direction]:
-        row,col = data['answerlocations'][cluenumber[0]]
-        # [1] is the clue for a human solver, we don't care about that
-        if data['puzzle'][row][col] != cluenumber[0]:
+      for cluenumber,humanclue in data['clues'][direction]:
+        row,col = data['answerlocations'][cluenumber]
+        if data['puzzle'][row][col] != cluenumber:
           raise RuntimeError(f"found a mismatch at ({row},{col}): expected {cluenumber}, saw {data['puzzle'][row][col]}")
 
-      # now we count the number of blanks from the start of the clue, 
-      # in the given direction, to the next BARRIER or boundary
+        # now we count the number of blanks from the start of the clue, 
+        # in the given direction, to the next BARRIER or boundary
 
         n = 1
+        solution = ''
         while True:
+          solution = solution + _getchar('solution',row,col)
           row += Puzzlestate.directions[direction][0]
           col += Puzzlestate.directions[direction][1]
           if (col == width or row == height or
               data['puzzle'][row][col] == Puzzlestate.BARRIER):
             break
-          data['clues_that_touch'][row][col].add( 
-                                     ( direction, cluenumber[0] )
-                                              )
+          data['clues_that_touch_cell'][row][col].add(_cluestick(direction=direction, cluenumber=cluenumber )
           n += 1
 
-        data['answerlengths'][repr([ direction, cluenumber[0] ])] = n
-        data['unsolved'].append( [ direction, cluenumber[0], n ] )
+        data['answerlengths'][_cluestick(direction=direction, cluenumber=cluenumber)] = n
+        data['unsolved'].append(_cluestick(direction=direction, cluenumber=cluenumber))
 
-        for d in data['clues']:
-          for cno,clue in data['clues'][direction]:
-            data['clues_expanded'][_cluestick(cluenumber=cno,direction=d)] = [
+    # now let's populate clues_expanded
+
+    for d in data['clues']:
+      for cno,clue in data['clues'][direction]:
+        data['clues_expanded'][_cluestick(cluenumber=cno,direction=d)] = [
               clue,
+              solution,
+              clues_that_touch_clue(_cluestick(cluenumber=cno,direction=d))
+            ]
                 
             
-            data['clues_denested'][str(cluenumber) + ' ' + direction] = humanclue
 
 
     return cls(data)
@@ -428,7 +437,7 @@ class Puzzlestate:
                            size=(_s['cellsize_mm'],_s['cellsize_mm']),
                            fill=_s['block_color']))
     # insert highlights 
-    for row,col in self.list_cells_in_clue(direction,cluenumber):
+    for row,col in self.list_clues_that_touch_clue(direction,cluenumber):
       drawing.add(drawing.rect(
                            insert=(
                                    col*_s['cellsize_mm']+_s['side_margin_mm'],
@@ -482,7 +491,7 @@ class Puzzlestate:
       if col == self.width() or row == self.height():
         # remember, rows and cols are numbered from zero
         break
-      for c,d in self.data['clues_that_touch'][row][col]:
+      for c,d in self.data['clues_that_touch_cell'][row][col]:
         if c != cluenumber or d != direction:
           intersections.add( [c,d] )
       row += row_increment   
