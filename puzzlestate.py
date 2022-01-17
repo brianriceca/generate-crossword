@@ -530,8 +530,10 @@ class Puzzlestate:
     else:
       # the puzzle will converge faster if we choose a next clue that 
       # is already partially completed
-      prevdirection, prevcluenumber = random.choice( self.data['solved_clues'] )
-      direction, cluenumber = random.choice( self.data['clues_that_touch_clue'(prevdirection, prevcluenumber) )
+      pd, pcno = random.choice( self.data['solved_clues'] )
+      direction, cluenumber = random.choice( 
+        self.data['clues_that_touch_clue'][Puzzlestate._getaclue(direction=pd, cluenumber=pcno)] 
+        )
       length = self.data['answerlengths'][Puzzlestate._getaclue(direction=direction, cluenumber=cluenumber ])]
     except IndexError:
       thisclue = self.data['unsolved'].pop()
@@ -564,6 +566,10 @@ class Puzzlestate:
 
     # and now we gather coldspots, in other words, places in this word that
     # make a downward search path from filling in this clue non-unique.
+    #    ? ? B ?
+    #    ? ? O ?
+    #    # # A #
+    #    ? ? T ?
     # BOAT and BOOT lead to the same searchspace if the third character doesn't
     # matter
 
@@ -638,12 +644,10 @@ class Puzzlestate:
       col += col_increment
     return True
 
-  def score_word(self,tryword,direction,cluenumber,safe=True):
-    # returns object containing the word if it was able to inscribe it,
-    # else returns none
+  def score_word(self,words_to_try,direction,cluenumber,safe=True):
 
     if safe:
-      if self.test_word(tryword,direction,cluenumber):
+      if self.test_word(words_to_try,direction,cluenumber):
         pass
       else:
         return None
@@ -678,11 +682,11 @@ class Puzzlestate:
                           lambda x: Puzzlestate.i_like_cons[ord(x)-65] ]
 
     score = 0
-    for i,c in enumerate(tryword):
-      predecessor = self.safe_getchar(*starboard(row,col))
-      successor = self.safe_getchar(*port(row,col))
+    for i,c in enumerate(words_to_try):
+      letter_to_starboard = self.safe_getchar(*starboard(row,col))
+      letter_to_port = self.safe_getchar(*port(row,col))
 
-      if ( (predecessor == Puzzlestate.BARRIER and successor == Puzzlestate.BARRIER) or
+      if ( (letter_to_port == Puzzlestate.BARRIER and letter_to_starboard == Puzzlestate.BARRIER) or
            (predecessor == Puzzlestate.UNSOLVED and successor == Puzzlestate.UNSOLVED) ):
         if len(tryword) == i:
           score += Puzzlestate.i_like_finals[ord(c)-65]
