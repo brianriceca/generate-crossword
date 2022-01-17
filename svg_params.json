@@ -1,6 +1,6 @@
 { 
     "cellsize_mm": 12,
-    "titleheight_mm": 14,
+    "title_height_mm": 14,
     "offset_cluenum_x": 1,
     "offset_cluenum_y": 3,
     "offset_solution_x": 4,

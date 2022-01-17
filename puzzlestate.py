@@ -5,6 +5,7 @@ operations on a crossword puzzle state
 
 import random
 import json
+import jsonpickle
 import copy
 import sys
 import svgwrite
@@ -159,7 +160,7 @@ class Puzzlestate:
         for col in range(width):
           if (isinstance(data['puzzle'][row][col],int)):
             # solution shouldn't have clue numbers in the first cell of answers
-            data['solution'] = Puzzlestate.UNSOLVED
+            data['solution'][row][col] = Puzzlestate.UNSOLVED
           
     if 'answerlocations' not in data.keys():
       data['answerlocations'] = {}
@@ -220,12 +221,12 @@ class Puzzlestate:
 
         n = 1
         while True:
+          data['clues_that_touch_cell'][row][col].add(Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber ))
           row += Puzzlestate.directions[direction][0]
           col += Puzzlestate.directions[direction][1]
           if (col == width or row == height or
               data['puzzle'][row][col] == Puzzlestate.BARRIER):
             break
-          data['clues_that_touch_cell'][row][col].add(Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber ))
           n += 1
 
         data['answerlengths'][Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber)] = n
@@ -338,46 +339,28 @@ class Puzzlestate:
     return self
 
   def writejson(self,filename):
+    myjson = jsonpickle.encode(self.data, unpicklable=False)
     try:
       with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(self.data, f, indent=2, sort_keys=True)
+        json.dump(myjson, f, indent=2, sort_keys=True)
     except OSError:
       raise RuntimeError(f'Could not write json to {filename}') from None
     return self
 
   def writesvg(self,filename,**kwargs):
-    showcluenumbers=True
-    showsolvedcells=True
-    showtitle=True
-    if 'showcluenumbers' in kwargs:
-      if isinstance(kwargs['showcluenumbers'], bool):
-        showcluenumbers = kwargs['showcluenumbers']
-      else:
+    if 'showcluenumbers' in kwargs and not isinstance(kwargs['showcluenumbers'], bool):
         raise RuntimeError('showcluenumbers arg must be True or False')
 
-    if 'showsolvedcells' in kwargs:
-      if isinstance(kwargs['showsolvedcells'], bool):
-        showsolvedcells = kwargs['showsolvedcells']
-      else:
+    if 'showsolvedcells' in kwargs and not isinstance(kwargs['showsolvedcells'], bool):
         raise RuntimeError('showsolvedcells arg must be True or False')
 
-    if 'showtitle' in kwargs:
-      if isinstance(kwargs['showtitle'], bool):
-        showtitle = kwargs['showtitle']
-      else:
+    if 'showtitle' in kwargs and not isinstance(kwargs['showtitle'], bool):
         raise RuntimeError('showsolvedcells arg must be True or False')
 
-    if 'highlight_box' in kwargs:
-      if not isinstance(kwargs['highlight_box'], tuple):
-        raise RuntimeError('highlight_answer arg must be a tuple')         
-      direction, cluenumber = Puzzlestate._getaclue(kwargs['highlight_box'])
-      if direction not in Puzzlestate.direction.keys():
-        raise RuntimeError(f'alleged direction {direction} is not one of {Puzzlestate.direction.keys()}')         
+    if 'highlight_cells' in kwargs and not isinstance(kwargs['highlight_cells'], list):
+        raise RuntimeError('highlight_cells value must be a list of [startingcell,direction,count]') 
 
-    if 'text_below_puzzle' in kwargs:
-      if isinstance(kwargs['text_below_puzzle'], str):
-        text_below_puzzle = kwargs['text_below_puzzle']
-      else:                                                                     
+    if 'text_below_puzzle' in kwargs and not isinstance(kwargs['text_below_puzzle'], str):                                                                    
         raise RuntimeError('text_below_puzzle arg must be a str')         
 
     title = self.gettitle()
@@ -395,16 +378,14 @@ class Puzzlestate:
       with open(_fn,encoding='utf-8') as f:
         _s = json.load(f)
     except OSError:
-      raise RuntimeError(f'Could not read json from {_fn}')
+      raise RuntimeError(f'Could not read my SVG params from {_fn}')
 
     _w = self.width()
     _h = self.height()
-    if showtitle:
-      pass
-    else:
-      _s['titleheight_mm'] = 0
+    if 'showtitle' not in kwargs or not kwargs['showtitle']:
+      _s['title_height_mm'] = 0
 
-    _s['top_margin_mm'] = _s['cellsize_mm'] + _s['titleheight_mm']
+    _s['top_margin_mm'] = _s['cellsize_mm'] + _s['title_height_mm']
     _s['bottom_margin_mm'] = _s['cellsize_mm']
     _s['side_margin_mm'] = _s['cellsize_mm']
 
@@ -466,17 +447,28 @@ class Puzzlestate:
                                   ),
                            size=(_s['cellsize_mm'],_s['cellsize_mm']),
                            fill=_s['block_color']))
+
     # insert highlights 
-    for row,col in self.list_clues_that_touch_clue(direction,cluenumber):
-      drawing.add(drawing.rect(
+
+    if 'highlight_cells' in kwargs:
+      for rc, direction, cellcount in kwargs['highlight_cells']:
+        row,col = rc
+        row_increment, col_increment = Puzzlestate.directions[direction]
+
+        i = 0
+        while i < cellcount:
+          drawing.add(drawing.rect(
                            insert=(
                                    col*_s['cellsize_mm']+_s['side_margin_mm'],
                                    row*_s['cellsize_mm']+_s['top_margin_mm']
                                   ),
                            size=(_s['cellsize_mm'],_s['cellsize_mm']),
                            fill=_s['highlight_color']))
+          row += row_increment
+          col += col_increment
+          i += 1
 
-    if showcluenumbers:
+    if 'showcluenumbers' in kwargs and kwargs['showcluenumbers']:
       g = drawing.g(class_='cluenumber',style = _s['cluenumber_style'])
       for answer in self.data['answerlocations'].keys():
         row,col = self.data['answerlocations'][answer]
@@ -488,20 +480,24 @@ class Puzzlestate:
                            )))
       drawing.add(g)
 
-    if showsolvedcells:
+    if 'showsolvedcells' in kwargs and kwargs['showsolvedcells']:
       g = drawing.g(class_='solvedcell', style = _s['solution_style'])
       for row in range(_h):
         for col in range(_w):
           c = self.getchar(row,col)
           if isinstance(c,str) and c.isalpha():
-            g.add(drawing.text(self.getchar(row,col),
+            g.add(drawing.text(c,
                     insert=(
                             col*_s['cellsize_mm']+_s['side_margin_mm']+_s['offset_solution_x'],
                             row*_s['cellsize_mm']+_s['top_margin_mm']+_s['offset_solution_y'],
                            )))
       drawing.add(g)
 
-    if showtitle:
+    if 'showtitle' in kwargs and kwargs['showtitle']:
+      if title is None or title == '':
+        mytitle = self.gettitle()
+      else:
+        mytitle = title
       g = drawing.g(class_='title', style = _s['title_style'])
       g.add(drawing.text(title,
                     insert=(
@@ -788,8 +784,12 @@ def main():
   print (f"source file is {sourcefile}")
   print (f"sparseness is {puzzle.sparseness()}")
 
-  puzzle.writesvg(f"{sourcefile}.svg".format(sourcefile), showtitle=True)
-#  puzzle.writejson("f{sourcefile}.out.ipuz")
+  puzzle.writesvg(f"{sourcefile}.svg", 
+                  showtitle=True, 
+                  showsolvedcells=True,
+                  highlight_cells=[ [ [4,7],  'Down',   6],
+                                    [ [11,9], 'Across', 3] ] )
+  puzzle.writejson(f"{sourcefile}.out.ipuz")
 
 if __name__ == '__main__':
   random.seed()
