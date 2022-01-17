@@ -519,11 +519,20 @@ class Puzzlestate:
     if 'unsolved' not in self.data:
       raise RuntimeError('missing unsolved data element')
     if len(self.data['unsolved']) == 0:
+      # wow, nothing left to do!
       return None
-    try:
+
+    if 'solved_clues' not in self.data:
+      raise RuntimeError('missing solved_clues data element')
+    if len(self.data['solved_clues']) == 0:
+      # OK, we are just getting started, so we get to be truly random!
+      direction, cluenumber = random.choice( self.data['clues_expanded'] )
+    else:
+      # the puzzle will converge faster if we choose a next clue that 
+      # is already partially completed
       prevdirection, prevcluenumber = random.choice( self.data['solved_clues'] )
-      direction, cluenumber = random.choice( self.find_intersectors(prevdirection, prevcluenumber) )
-      length = self.data['answerlengths'][repr([ direction, cluenumber ])]
+      direction, cluenumber = random.choice( self.data['clues_that_touch_clue'(prevdirection, prevcluenumber) )
+      length = self.data['answerlengths'][Puzzlestate._getaclue(direction=direction, cluenumber=cluenumber ])]
     except IndexError:
       thisclue = self.data['unsolved'].pop()
       direction, cluenumber, length = thisclue
