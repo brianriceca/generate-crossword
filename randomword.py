@@ -25,7 +25,7 @@ class Randomword:
     filenamepattern = re.compile(r"^(.*)-")
 
     for fname in os.listdir(Randomword.WORDLISTDIR):
-      if fname.endswith('-category.txt'):
+      if fname.endswith('babyanimals-category.txt'):
         m = filenamepattern.match(fname)
         if m:
           category = m.group(1)

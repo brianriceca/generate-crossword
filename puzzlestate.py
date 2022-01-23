@@ -5,12 +5,13 @@ operations on a crossword puzzle state
 
 import random
 import json
-import jsonpickle
 import copy
 import sys
-import svgwrite
 import os
 from itertools import permutations
+
+import svgwrite
+import jsonpickle
 
 script_folder = os.path.dirname(os.path.realpath(__file__))
 
@@ -45,8 +46,8 @@ class Puzzlestate:
       raise RuntimeError(f'This is not a proper clue: {repr(kwargs)}')
     return str(kwargs['cluenumber']) + ' ' + kwargs['direction']
   def _getaclue(s):
-    return s.split(s) 
- 
+    return s.split(s)
+
   # Directions are defined as [rowincrement,colincrement]
 
   i_like_vowels = _slurpjson('vowel_friendly_weightings.json')
@@ -69,7 +70,7 @@ class Puzzlestate:
                   [[Puzzlestate.UNSOLVED for col in range(width)]
                     for row in range(height)] ,
                  "solution":
-                  [[Puzzlestate.UNSOLVED for col in range(width)] 
+                  [[Puzzlestate.UNSOLVED for col in range(width)]
                     for row in range(height)] })
 
 
@@ -151,7 +152,7 @@ class Puzzlestate:
     height = int(data['dimensions']['height'])
 
     if 'wordsused' not in data.keys():
-      data['wordsused'] = set()  
+      data['wordsused'] = set()
       # TODO: detect the words in the solution, if any, and add them to the set
 
     if 'solution' not in data.keys():
@@ -161,7 +162,7 @@ class Puzzlestate:
           if (isinstance(data['puzzle'][row][col],int)):
             # solution shouldn't have clue numbers in the first cell of answers
             data['solution'][row][col] = Puzzlestate.UNSOLVED
-          
+
     if 'answerlocations' not in data.keys():
       data['answerlocations'] = {}
     if 'answerlengths' not in data.keys():
@@ -198,14 +199,14 @@ class Puzzlestate:
             data['puzzle'][row][col] = data['puzzle'][row][col].upper()
         elif isinstance(cellcontents, dict):
           raise RuntimeError("I don't know how to deal with fancy cells yet")
-        else: 
+        else:
           raise RuntimeError(f"weird cell content: [{row},{col}] is {cellcontents}, type {type(cellcontents)}")
 
     # now squirrel away the length of the answer for each clue,
     # as well as, for each [row,col] all the clues that touch that space
 
     data['clues_that_touch_cell'] = [[ set() for i in range(width)]
-                    for j in range(height)] 
+                    for j in range(height)]
     data['clues_that_touch_clue'] = dict()
 
     for direction in data['clues']:
@@ -216,7 +217,7 @@ class Puzzlestate:
         if data['puzzle'][row][col] != cluenumber:
           raise RuntimeError(f"found a mismatch at ({row},{col}): expected {cluenumber}, saw {data['puzzle'][row][col]}")
 
-        # now we count the number of blanks from the start of the clue, 
+        # now we count the number of blanks from the start of the clue,
         # in the given direction, to the next BARRIER or boundary
 
         n = 1
@@ -231,7 +232,7 @@ class Puzzlestate:
 
         data['answerlengths'][Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber)] = n
         data['unsolved'].append(Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber))
-  
+
     # now we have, for each cell, a set of clues that touch that cell
     # let's transpose that into, for each clue, a set of (other) clues that touch
     # that clue
@@ -242,7 +243,7 @@ class Puzzlestate:
           if cluea not in data['clues_that_touch_clue']:
             data['clues_that_touch_clue'][cluea] = set()
           data['clues_that_touch_clue'][cluea].add(clueb)
-    
+
     # now let's populate clues_expanded
     # sample dict item:
     # '1 Down': 'Launches', 5, [ '1 Across', '14 Across', '17 Across', '20 Across']
@@ -255,7 +256,10 @@ class Puzzlestate:
               data['answerlengths'][myclue],
               data['clues_that_touch_clue'][myclue]
             ]
-                
+
+    if 'solved_clues' not in data:
+      data['solved_clues'] = list()
+  
     return cls(data)
 
 #####################
@@ -358,10 +362,10 @@ class Puzzlestate:
         raise RuntimeError('showsolvedcells arg must be True or False')
 
     if 'highlight_cells' in kwargs and not isinstance(kwargs['highlight_cells'], list):
-        raise RuntimeError('highlight_cells value must be a list of [startingcell,direction,count]') 
+        raise RuntimeError('highlight_cells value must be a list of [startingcell,direction,count]')
 
-    if 'text_below_puzzle' in kwargs and not isinstance(kwargs['text_below_puzzle'], str):                                                                    
-        raise RuntimeError('text_below_puzzle arg must be a str')         
+    if 'text_below_puzzle' in kwargs and not isinstance(kwargs['text_below_puzzle'], str):
+        raise RuntimeError('text_below_puzzle arg must be a str')
 
     title = self.gettitle()
     if title is None or title == '':
@@ -390,11 +394,11 @@ class Puzzlestate:
     _s['side_margin_mm'] = _s['cellsize_mm']
 
     _s['width_mm'] = _s['cellsize_mm']*_w + 2*_s['side_margin_mm']
-    _s['height_mm'] = (_s['cellsize_mm']*_h + 
+    _s['height_mm'] = (_s['cellsize_mm']*_h +
                        _s['top_margin_mm'] +
                        _s['bottom_margin_mm'])
 
-    drawing = svgwrite.Drawing(filename, 
+    drawing = svgwrite.Drawing(filename,
               size=(f"{_s['width_mm']}mm",f"{_s['height_mm']}mm"))
     drawing.viewbox(0, 0, _s['height_mm'], _s['width_mm'])
 
@@ -402,7 +406,7 @@ class Puzzlestate:
     for i in range(1,_h):
       y = _s['top_margin_mm'] + i * _s['cellsize_mm']
       drawing.add(drawing.line(
-                          start=(_s['side_margin_mm'], y), 
+                          start=(_s['side_margin_mm'], y),
                           end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], y),
                           stroke=_s['line_color'],stroke_width=_s['line_width']))
 
@@ -421,7 +425,7 @@ class Puzzlestate:
     for i in range(1,_w):
       x = _s['side_margin_mm'] + i * _s['cellsize_mm']
       drawing.add(drawing.line(
-                          start=(x,_s['top_margin_mm']), 
+                          start=(x,_s['top_margin_mm']),
                           end=(x,_s['cellsize_mm']*_h+_s['top_margin_mm']),
 
                           stroke=_s['line_color'],stroke_width=_s['line_width']))
@@ -431,7 +435,7 @@ class Puzzlestate:
                         end=(_s['side_margin_mm'], _s['cellsize_mm']*_h+_s['top_margin_mm']),
                         stroke=_s['line_color'],stroke_width=1,style=_s['outer_line_style']))
     drawing.add(drawing.line(
-                        start=(_s['cellsize_mm']*_w+_s['side_margin_mm'],_s['top_margin_mm']), 
+                        start=(_s['cellsize_mm']*_w+_s['side_margin_mm'],_s['top_margin_mm']),
                         end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], _s['cellsize_mm']*_h + _s['top_margin_mm']),
                         stroke=_s['line_color'],stroke_width=_s['line_width'],style=_s['outer_line_style']))
 
@@ -448,7 +452,7 @@ class Puzzlestate:
                            size=(_s['cellsize_mm'],_s['cellsize_mm']),
                            fill=_s['block_color']))
 
-    # insert highlights 
+    # insert highlights
 
     if 'highlight_cells' in kwargs:
       for rc, direction, cellcount in kwargs['highlight_cells']:
@@ -528,21 +532,21 @@ class Puzzlestate:
       # OK, we are just getting started, so we get to be truly random!
       direction, cluenumber = random.choice( self.data['clues_expanded'] )
     else:
-      # the puzzle will converge faster if we choose a next clue that 
+      # the puzzle will converge faster if we choose a next clue that
       # is already partially completed
       pd, pcno = random.choice( self.data['solved_clues'] )
-      direction, cluenumber = random.choice( 
-        self.data['clues_that_touch_clue'][Puzzlestate._getaclue(direction=pd, cluenumber=pcno)] 
+      direction, cluenumber = random.choice(
+        self.data['clues_that_touch_clue'][Puzzlestate._getaclue(direction=pd, cluenumber=pcno)]
         )
-      length = self.data['answerlengths'][Puzzlestate._getaclue(direction=direction, cluenumber=cluenumber ])]
-    except IndexError:
+      length = self.data['answerlengths'][Puzzlestate._getaclue(direction=direction, cluenumber=cluenumber )]
+
       thisclue = self.data['unsolved'].pop()
       direction, cluenumber, length = thisclue
       if direction not in Puzzlestate.directions.keys():
         raise RuntimeError(f'{direction} is not a direction') from None
 
     row_increment, col_increment = Puzzlestate.directions[direction]
-      
+
     # now we gather the constraints, i.e., letters already filled in
 
     constraints = []
@@ -667,14 +671,14 @@ class Puzzlestate:
     # is that first space an even space or an odd space?
 
     if row % 2:
-      if col % 2: 
+      if col % 2:
         score_machine =  [lambda x: Puzzlestate.i_like_vowels[ord(x)-65] ,
                           lambda x: Puzzlestate.i_like_cons[ord(x)-65] ]
       else:
         score_machine =  [lambda x: Puzzlestate.i_like_cons[ord(x)-65] ,
                           lambda x: Puzzlestate.i_like_vowels[ord(x)-65] ]
     else:
-      if col % 2: 
+      if col % 2:
         score_machine =  [lambda x: Puzzlestate.i_like_cons[ord(x)-65] ,
                           lambda x: Puzzlestate.i_like_vowels[ord(x)-65] ]
       else:
@@ -682,16 +686,16 @@ class Puzzlestate:
                           lambda x: Puzzlestate.i_like_cons[ord(x)-65] ]
 
     score = 0
-    for i,c in enumerate(words_to_try):
+    for i,tryword in enumerate(words_to_try):
       letter_to_starboard = self.safe_getchar(*starboard(row,col))
       letter_to_port = self.safe_getchar(*port(row,col))
-
+#gotta fix this region
       if ( (letter_to_port == Puzzlestate.BARRIER and letter_to_starboard == Puzzlestate.BARRIER) or
-           (predecessor == Puzzlestate.UNSOLVED and successor == Puzzlestate.UNSOLVED) ):
+           (letter_to_starboard == Puzzlestate.UNSOLVED and letter_to_starboard == Puzzlestate.UNSOLVED) ):
         if len(tryword) == i:
           score += Puzzlestate.i_like_finals[ord(c)-65]
         else:
-          score += score_machine[i % 2](c)       
+          score += score_machine[i % 2](c)
         row += row_increment
         col += col_increment
         continue
@@ -780,7 +784,7 @@ class Puzzlestate:
 
   def sparseness(self):
     size = self.height() * self.width()
-    black_squares = sum ( [ sum ([ 1 for col in row if col == Puzzlestate.BARRIER ]) 
+    black_squares = sum ( [ sum ([ 1 for col in row if col == Puzzlestate.BARRIER ])
                                    for row in self.data['puzzle'] ] )
     if size == 0:
       raise RuntimeError("puzzle is size zero?")
@@ -797,8 +801,8 @@ def main():
   print (f"source file is {sourcefile}")
   print (f"sparseness is {puzzle.sparseness()}")
 
-  puzzle.writesvg(f"{sourcefile}.svg", 
-                  showtitle=True, 
+  puzzle.writesvg(f"{sourcefile}.svg",
+                  showtitle=True,
                   showsolvedcells=True,
                   highlight_cells=[ [ [4,7],  'Down',   6],
                                     [ [11,9], 'Across', 3] ] )
