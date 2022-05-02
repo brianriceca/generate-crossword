@@ -8,6 +8,7 @@ import json
 import copy
 import sys
 import os
+import logging
 from itertools import permutations
 
 import svgwrite
@@ -45,6 +46,7 @@ class Puzzlestate:
     if ('direction' not in kwargs or 'cluenumber' not in kwargs):
       raise RuntimeError(f'This is not a proper clue: {repr(kwargs)}')
     return str(kwargs['cluenumber']) + ' ' + kwargs['direction']
+
   def _getaclue(s):
     return s.split(s)
 
@@ -528,9 +530,10 @@ class Puzzlestate:
 
     if 'solved_clues' not in self.data:
       raise RuntimeError('missing solved_clues data element')
+
     if len(self.data['solved_clues']) == 0:
       # OK, we are just getting started, so we get to be truly random!
-      direction, cluenumber = _getaclue(self.data['clues_expanded'][random.choice(list(self.data['clues_expanded'].keys()))])
+      direction, cluenumber = Puzzlestate._getaclue(self.data['clues_expanded'][random.choice(list(self.data['clues_expanded'].keys()))])
     else:
       # the puzzle will converge faster if we choose a next clue that
       # is already partially completed
@@ -610,6 +613,8 @@ class Puzzlestate:
       row += row_increment
       col += col_increment
       i += 1
+
+    logging.info(f"let's try {cluenumber} {direction}")
 
     return [direction, cluenumber, length, constraints, coldspots]
 
@@ -729,6 +734,7 @@ class Puzzlestate:
       row += row_increment
       col += col_increment
 
+    logging.info(f"inscribed {word} into {cluenumber} {direction}")
     self.addwordused(word)
     return self
 
