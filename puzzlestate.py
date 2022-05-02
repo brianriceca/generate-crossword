@@ -530,7 +530,7 @@ class Puzzlestate:
       raise RuntimeError('missing solved_clues data element')
     if len(self.data['solved_clues']) == 0:
       # OK, we are just getting started, so we get to be truly random!
-      direction, cluenumber = random.choice( self.data['clues_expanded'] )
+      direction, cluenumber = _getaclue(self.data['clues_expanded'][random.choice(list(self.data['clues_expanded'].keys()))])
     else:
       # the puzzle will converge faster if we choose a next clue that
       # is already partially completed
