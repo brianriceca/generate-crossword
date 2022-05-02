@@ -45,22 +45,22 @@ def solve(puzzle,recursion_depth,wordsource):
   direction, cluenumber, wordlength, constraints, coldspots = thisclue
 
   if constraints:
-    logging.info(f'r{recursion_depth} Trying to solve {cluenumber} {direction} with {repr(constraints)}')
+    logging.info(f'r{recursion_depth:03} Trying to solve {cluenumber} {direction} with {repr(constraints)}')
   else:
-    logging.info(f'r{recursion_depth} Trying to solve {cluenumber} {direction}')
+    logging.info(f'r{recursion_depth:03} Trying to solve {cluenumber} {direction}')
 
   trywords = wordspitter.randomwords(wordlength,
                                      constraints,
                                      wordsource )
   if len(trywords) == 0:
     # Welp, no words in the dictionary fit
-    logging.info(f'{recursion_depth} nothing fits {cluenumber} {direction}')
+    logging.info(f'{recursion_depth:03} nothing fits {cluenumber} {direction}')
     return None
 
   trywords =  [ x for x in trywords if x not in puzzle.data['wordsused'] ]
   if len(trywords) == 0:
     # Welp, no words in the dictionary fit that haven't been tried.
-    logging.info(f'{recursion_depth} nothing new fits {cluenumber} {direction}')
+    logging.info(f'{recursion_depth:03} nothing new fits {cluenumber} {direction}')
     return None
 
   # now we sort trywords so that words that score higher are earlier!
@@ -71,22 +71,22 @@ def solve(puzzle,recursion_depth,wordsource):
   for tryword in trywords:
     tryword_masked = _mask_coldspots(tryword,coldspots)
     if tryword_masked in paths_already_explored:
-      logging.info(f'{recursion_depth} no point in pursuing {tryword}')
+      logging.info(f'{recursion_depth:03} no point in pursuing {tryword}')
       continue
     paths_already_explored.add(tryword_masked)
     puzzle2 = puzzle.copy().inscribe_word(tryword, direction, cluenumber)
 
     if puzzle2 is None:
-      logging.info(f'{recursion_depth} tried {tryword} in {cluenumber} {direction}, but it doesnt fit')
+      logging.info(f'{recursion_depth:03} tried {tryword} in {cluenumber} {direction}, but it doesnt fit')
       continue
 
-#   puzzle2.settitle(f'Depth {recursion_depth}')
-    logging.info(f'{recursion_depth} {tryword} seems to work in {cluenumber} {direction}!')
+#   puzzle2.settitle(f'Depth {recursion_depth:03}')
+    logging.info(f'{recursion_depth:03} {tryword} seems to work in {cluenumber} {direction}!')
     puzzle3 = solve(puzzle2,recursion_depth+1,wordsource)
     if puzzle3 is None:
-      logging.info(f"{recursion_depth} the recursive call with {direction} {cluenumber} == {tryword} failed")
+      logging.info(f"{recursion_depth:03} the recursive call with {direction} {cluenumber} == {tryword} failed")
       continue
-    logging.info(f"{recursion_depth} the recursive call with {direction} {cluenumber} == {tryword} came back happy!")
+    logging.info(f"{recursion_depth:03} the recursive call with {direction} {cluenumber} == {tryword} came back happy!")
     return puzzle3
 
 
