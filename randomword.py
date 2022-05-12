@@ -7,11 +7,12 @@ import copy
 import sys
 import os
 import re
+import sqlite3
 
 
 class Randomword:
 
-  WORDLISTDIR="/Users/brice/generate-crossword/wordstotry/"
+  WORDDB="/Users/brice/generate-crossword/wordstotry/words.db"
 
   categories = {}
 
@@ -20,44 +21,24 @@ class Randomword:
       random.seed(int(time.time()))
     else:
       random.seed(seed)
-    self.words = dict()
-
-    filenamepattern = re.compile(r"^(.*)-")
-
-    for fname in os.listdir(Randomword.WORDLISTDIR):
-      if fname.endswith('babyanimals-category.txt'):
-        m = filenamepattern.match(fname)
-        if m:
-          category = m.group(1)
-          if category not in self.words:
-            self.words[category] = list()
-          with open(os.path.join(Randomword.WORDLISTDIR, fname), 'r', encoding="latin-1") as f:
-            while True:
-              line = f.readline().strip()
-              if not line:
-                break
-              self.words[category].append(line)
-        f.close()
-
+    con = sqlite3.connect('file:' + words.db + '?mode=ro', uri=True)
+    return con
 
   def randomwords(self, desired_length, constraints, category):
 
-    if category not in self.words:
-      raise RuntimeError(f'unknown category {category}')
+    if not isinstance(category, int):
+      raise RuntimeError(f'category {category} is sposta be an int')
   
-    pattern = list('.' * desired_length)
+    pattern = list('_' * desired_length)
     if constraints:
       for constraint in constraints:
         n,c = constraint
         pattern[n] = c
     
-    pattern = ''.join(pattern)
-    r = re.compile('^' + pattern + '$')
-      
-    filtered_result = [ x for x in self.words[category] if r.match(x) ]
-    if filtered_result is None:
-      return None
-    return filtered_result
+    cur = con.cursor()
+    matchingwords = cur.execute("select word from words where word like '" + pattern + "';").fetchall()
+
+    return matchingwords
 
 # end of class methods
 
