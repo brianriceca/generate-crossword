@@ -24,7 +24,12 @@ class Randomword:
       random.seed(seed)
     self.con = sqlite3.connect('file:' + Randomword.WORDDB + '?mode=ro', uri=True)
 
-  def randomwords(self, desired_length, constraints, category):
+  def randomwords(self, desired_length, constraints, category, precedence):
+
+  # precedence: order in which to fetch from various dictionaries 
+  # 0 = the themed word for this puzzle
+  # 1 = vanilla words
+  # maybe 2 is proper names, 3 is 2-gram pairs...
 
     if not isinstance(category, int):
       raise RuntimeError(f'category {category} is sposta be an int')
@@ -37,7 +42,7 @@ class Randomword:
     
     pattern = ''.join(pattern)
     cur = self.con.cursor()
-    matchingwords = cur.execute("select word from words where word like '" + pattern + "';").fetchall()
+    matchingwords = cur.execute("select word from words where word like '" + pattern + " and precedence = '" + str(precedence) + "';").fetchall()
 
     return matchingwords
 
