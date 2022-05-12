@@ -577,8 +577,7 @@ class Puzzlestate:
     #    ? ? O ?
     #    # # A #
     #    ? ? T ?
-    # BOAT and BOOT lead to the same searchspace if the third character doesn't
-    # matter
+    # BOOT would lead to the same searchspace as BOAT searchspace if the third character doesn't matter
 
     coldspots = []
     row,col = self.data['answerlocations'][cluenumber]
