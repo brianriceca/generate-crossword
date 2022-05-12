@@ -12,7 +12,8 @@ import sqlite3
 
 class Randomword:
 
-  WORDDB="/Users/brice/generate-crossword/wordstotry/words.db"
+  WORDDB="/Users/brice/generate-crossword/words.db"
+  con = None
 
   categories = {}
 
@@ -21,8 +22,7 @@ class Randomword:
       random.seed(int(time.time()))
     else:
       random.seed(seed)
-    con = sqlite3.connect('file:' + words.db + '?mode=ro', uri=True)
-    return con
+    self.con = sqlite3.connect('file:' + Randomword.WORDDB + '?mode=ro', uri=True)
 
   def randomwords(self, desired_length, constraints, category):
 
@@ -35,39 +35,40 @@ class Randomword:
         n,c = constraint
         pattern[n] = c
     
-    cur = con.cursor()
+    pattern = ''.join(pattern)
+    cur = self.con.cursor()
     matchingwords = cur.execute("select word from words where word like '" + pattern + "';").fetchall()
 
     return matchingwords
 
 # end of class methods
 
-#def main():
-#
-#  emptyset = set()
-#  emptylist = list()
-#
-#  wordspitter = Randomword(0)
-#  words = wordspitter.randomwords(3,emptylist,1.0)
-#  print("random 3 letter word is ")
-#  print(words)
-#  
-#  wordspitter = Randomword(0)
-#  constraintlist = [ [ 1, 'I' ] ]
-#  words = wordspitter.randomwords(3,constraintlist,1.0)
-#  print("random 3 letter word is ")
-#  print(words)
-#  
-#  words = wordspitter.randomwords(5,emptylist,1.0)
+def main():
+
+  emptyset = set()
+  emptylist = list()
+
+  wordspitter = Randomword(0)
+  words = wordspitter.randomwords(3,emptylist,1)
+  print("random 3 letter word is ")
+  print(words)
+  
+  wordspitter = Randomword(0)
+  constraintlist = [ [ 1, 'I' ] , [ 2, 'X'] ]
+  words = wordspitter.randomwords(3,constraintlist,1)
+  print("random 3 letter word is ")
+  print(words)
+  
+#  words = wordspitter.randomwords(5,emptylist,1)
 #  print("random 5 letter word is ")
 #  print(words)
-#  
+  
 #  already_used = set()
 #  already_used.add('PUPPY')
-#  words = wordspitter.randomwords(5,emptylist,1.0)
+#  words = wordspitter.randomwords(5,emptylist,1)
 #  print("random 5 letter word is ")
 #  print(words)
-#  
-#if __name__ == '__main__':
-#    main()
-#
+  
+if __name__ == '__main__':
+    main()
+
