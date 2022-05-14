@@ -5,9 +5,9 @@ import os
 
 con = sqlite3.connect('words.db')
 con.execute('''CREATE TABLE words
-               (word text NOT NULL, source integer)''')
+               (word text NOT NULL, length integer, source integer)''')
 
-sql_ddl = "INSERT INTO words VALUES (?, ?)"
+sql_ddl = "INSERT INTO words VALUES (?, ?, ?)"
 
 cur = con.cursor()
 with open('wordstotry/english1020-category.txt', 'r', encoding="latin-1") as f:
@@ -16,7 +16,7 @@ with open('wordstotry/english1020-category.txt', 'r', encoding="latin-1") as f:
     if not line:
       break
     print(f'writing {line}')
-    cur.execute(sql_ddl, (line,0))
+    cur.execute(sql_ddl, (line,len(line), 0))
 
 con.commit()
 con.close()
