@@ -42,7 +42,7 @@ class Randomword:
     
     pattern = ''.join(pattern)
     cur = self.con.cursor()
-    matchingwords = cur.execute("select word from words where word like '" + pattern + " and precedence = '" + str(precedence) + "';").fetchall()
+    matchingwords = cur.execute('select word from words where length = ' + str(desired_length) + ' and word like "' + pattern + '" and precedence = '" + str(precedence) + "';").fetchall()
 
     return matchingwords
 
