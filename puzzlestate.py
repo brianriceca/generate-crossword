@@ -42,13 +42,16 @@ class Puzzlestate:
       raise RuntimeError(f'Could not read json from {fn}')
     return result
 
-  def _cluestick(**kwargs):
+  def _clue_stringify(**kwargs):
+    '''transform a clue as dict to a clue as string'''
     if ('direction' not in kwargs or 'cluenumber' not in kwargs):
       raise RuntimeError(f'This is not a proper clue: {repr(kwargs)}')
     return str(kwargs['cluenumber']) + ' ' + kwargs['direction']
 
-  def _getaclue(s):
-    return s.split(s)
+  def _clue_dictify(s):
+    '''transform a clue as string to a clue as dict'''
+    c = s.split()
+    return { 'cluenumber': int(c[0]), 'direction': str(c[1]) }
 
   # Directions are defined as [rowincrement,colincrement]
 
@@ -116,10 +119,6 @@ class Puzzlestate:
       if not isinstance(data['clues'][d],dict):
         if not isinstance(data['clues'][d],list):
           raise RuntimeError(f"File {filename} has a {d} clues element of type {type(data['clues'][d])}, which is bizarre")
-        clues2 = dict()
-      for item in data['clues'][d]:
-        clues2[item[0]] = item[1]
-        data['clues'][d] = clues2
 
     if isinstance(data['dimensions']['width'],str):
       if data['dimensions']['width'].isnumeric():
@@ -169,8 +168,6 @@ class Puzzlestate:
       data['answerlocations'] = {}
     if 'answerlengths' not in data.keys():
       data['answerlengths'] = {}
-    if 'unsolved' not in data.keys():
-      data['unsolved'] = []
     if 'clues_expanded' not in data.keys():
       data['clues_expanded'] = {}
 
@@ -182,18 +179,18 @@ class Puzzlestate:
         # first, let's determine whether what's here is a clue number,
         # and make sure it is an integer if it is
 
-        if isinstance(cellcontents,int):
+        if isinstance(thisclue := cellcontents,int):
           # cool, no work to do, let's just confirm it's positive
-          if cellcontents < 0:
+          if thisclue < 0:
             raise RuntimeError(f'whoa, clue numbers must be positive, unlike [{row},{col}], which is {cellcontents}')
-          elif cellcontents == 0:
+          elif thisclue == 0:
             cellcontents = Puzzlestate.UNSOLVED
           else:
-            data['answerlocations'][cellcontents] = [row,col]
-        elif isinstance(cellcontents,str):
-          if cellcontents.isdigit():
-            data['puzzle'][row][col] = int(cellcontents)
-            data['answerlocations'][int(cellcontents)] = [row,col]
+            data['answerlocations'][thisclue] = [row,col]
+        elif isinstance(thisclue,str):
+          if thisclue.isdigit():
+            data['puzzle'][row][col] = int(thisclue)
+            data['answerlocations'][int(thisclue)] = [row,col]
           elif (cellcontents == Puzzlestate.UNSOLVED or
                 cellcontents == Puzzlestate.BARRIER):
             pass
@@ -209,7 +206,7 @@ class Puzzlestate:
 
     data['clues_that_touch_cell'] = [[ set() for i in range(width)]
                     for j in range(height)]
-    data['clues_that_touch_clue'] = dict()
+    _clues_that_touch_clue = dict()
 
     for direction in data['clues']:
       if direction not in Puzzlestate.directions.keys():
@@ -224,7 +221,7 @@ class Puzzlestate:
 
         n = 1
         while True:
-          data['clues_that_touch_cell'][row][col].add(Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber ))
+          data['clues_that_touch_cell'][row][col].add(Puzzlestate._clue_stringify(direction=direction, cluenumber=cluenumber ))
           row += Puzzlestate.directions[direction][0]
           col += Puzzlestate.directions[direction][1]
           if (col == width or row == height or
@@ -232,8 +229,8 @@ class Puzzlestate:
             break
           n += 1
 
-        data['answerlengths'][Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber)] = n
-        data['unsolved'].append(Puzzlestate._cluestick(direction=direction, cluenumber=cluenumber))
+        data['answerlengths'][Puzzlestate._clue_stringify(direction=direction, cluenumber=cluenumber)] = n
+        data['unsolved_clues'].append(Puzzlestate._clue_stringify(direction=direction, cluenumber=cluenumber))
 
     # now we have, for each cell, a set of clues that touch that cell
     # let's transpose that into, for each clue, a set of (other) clues that touch
@@ -242,25 +239,28 @@ class Puzzlestate:
     for row in range(height):
       for col in range(width):
         for cluea,clueb in list(permutations(data['clues_that_touch_cell'][row][col],2)):
-          if cluea not in data['clues_that_touch_clue']:
-            data['clues_that_touch_clue'][cluea] = set()
-          data['clues_that_touch_clue'][cluea].add(clueb)
+          if cluea not in _clues_that_touch_clue:
+            _clues_that_touch_clue[cluea] = set()
+          _clues_that_touch_clue[cluea].add(clueb)
 
     # now let's populate clues_expanded
     # sample dict item:
-    # '1 Down': 'Launches', 5, [ '1 Across', '14 Across', '17 Across', '20 Across']
+    # '1 Down': { cluetext: 'Launches', length: 5, [ '1 Across', '14 Across', '17 Across', '20 Across']
 
     for d in data['clues']:
       for cno in data['clues'][d].keys():
-        myclue = Puzzlestate._cluestick(cluenumber=cno,direction=d)
-        data['clues_expanded'][myclue] = [
-              data['clues'][d][cno],
-              data['answerlengths'][myclue],
-              data['clues_that_touch_clue'][myclue]
-            ]
+        myclue = Puzzlestate._clue_stringify(cluenumber=cno,direction=d)
+        data['clues_expanded'][myclue] = {
+          'cluetext': data['clues'][d][cno],
+          'wordlength': data['answerlengths'][myclue],
+          'location': data['answerlocations'][cno] = [row,col]
+          'intersecting_clues': _clues_that_touch_clue[myclue]
+        }
 
     if 'solved_clues' not in data:
       data['solved_clues'] = list()
+    if 'unsolved_clues' not in data.keys():
+      data['unsolved_clues'] = list(data['clues_expanded'].keys())
   
     return cls(data)
 
@@ -516,34 +516,48 @@ class Puzzlestate:
     drawing.save()
 
   def intersecting_clues(self, cluenumber, direction):
-    return self.data['clues_that_touch_clue'][Puzzlestate._cluestick(
+    return self.data[Puzzlestate._clue_stringify(
                                             cluenumber=cluenumber,
-                                            direction=direction)]
+                                            direction=direction)]['intersecting_clues']
 
 
-  def random_unsolved_clue(self):
-    if 'unsolved' not in self.data:
+  def unsolved_clues(self):
+    '''
+    return a list of clues to be solved, where each is described as 
+    { 'clue' : str,
+      'wordlength' : int,
+      'constraints' : [ [ index, whichchar ], ... ],
+      'coldspots' : [ index, ... ]
+    }
+    '''
+    if 'unsolved_clues' not in self.data:
       raise RuntimeError('missing unsolved data element')
-    if len(self.data['unsolved']) == 0:
-      # wow, nothing left to do!
-      return None
-
     if 'solved_clues' not in self.data:
       raise RuntimeError('missing solved_clues data element')
 
+    if len(self.data['unsolved_clues']) == 0:
+      # wow, nothing left to do!
+      return None
+
+   unsolved_clue_list = self.data['unsolved_clues']
+
     if len(self.data['solved_clues']) == 0:
       # OK, we are just getting started, so we get to be truly random!
-      direction, cluenumber = Puzzlestate._getaclue(self.data['clues_expanded'][random.choice(list(self.data['clues_expanded'].keys()))])
+      cluenumber, direction = Puzzlestate._clue_dictify(random.choice(list(self.data['clues_expanded'].keys())))
     else:
       # the puzzle will converge faster if we choose a next clue that
       # is already partially completed
       pd, pcno = random.choice( self.data['solved_clues'] )
-      direction, cluenumber = random.choice(
-        self.data['clues_that_touch_clue'][Puzzlestate._getaclue(direction=pd, cluenumber=pcno)]
+      cluenumber, direction = random.choice(
+        _clues_that_touch_clue[Puzzlestate._clue_dictify(direction=pd, cluenumber=pcno)]
         )
-      length = self.data['answerlengths'][Puzzlestate._getaclue(direction=direction, cluenumber=cluenumber )]
+      length = self.data['answerlengths'][Puzzlestate._clue_dictify(direction=direction, cluenumber=cluenumber )]
 
-      thisclue = self.data['unsolved'].pop()
+      # Wait, what? Which method are we using to choose a clue?
+      # the one above or the one below?
+      # pick a way dammit
+
+      thisclue = self.data['unsolved_clues'].pop()
       direction, cluenumber, length = thisclue
       if direction not in Puzzlestate.directions.keys():
         raise RuntimeError(f'{direction} is not a direction') from None
@@ -613,9 +627,7 @@ class Puzzlestate:
       col += col_increment
       i += 1
 
-    logging.info(f"let's try {cluenumber} {direction}")
-
-    return [direction, cluenumber, length, constraints, coldspots]
+    return unsolved_clue_list
 
   def getwordsused(self):
     try:

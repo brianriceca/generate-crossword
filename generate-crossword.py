@@ -31,6 +31,7 @@ def solve(puzzle,recursion_depth,wordsource):
   """
   attempt to find a word that fits into one clue in puzzle and then
   recursively solve the puzzle with that clue inserted
+  if we fail, then try a different clue instead
   """
 
   puzzle2 = None
@@ -38,56 +39,57 @@ def solve(puzzle,recursion_depth,wordsource):
 
   #puzzle.export_puzzlestate()
 
-  thisclue = puzzle.random_unsolved_clue()
-  if thisclue is None:
-    # puzzle is solved! no more unsolved clues
-    return puzzle
-  direction, cluenumber, wordlength, constraints, coldspots = thisclue
+  for thisclue in puzzle.unsolved_clues():
+    if thisclue is None:
+      # puzzle is solved! no more unsolved clues
+      return puzzle
+    cluenumber, direction, wordlength, constraints, coldspots = thisclue
 
-  if constraints:
-    logging.info(f'r{recursion_depth:03} Trying to solve {cluenumber} {direction} with {repr(constraints)}')
-  else:
-    logging.info(f'r{recursion_depth:03} Trying to solve {cluenumber} {direction}')
+    if constraints:
+      logging.info(f'r{recursion_depth:03} Trying to solve {cluenumber} {direction} with {repr(constraints)}')
+    else:
+     logging.info(f'r{recursion_depth:03} Trying to solve {cluenumber} {direction}')
 
-  trywords = wordspitter.randomwords(wordlength,
+    trywords = wordspitter.randomwords(wordlength,
                                      constraints,
                                      wordsource )
-  if len(trywords) == 0:
-    # Welp, no words in the dictionary fit
-    logging.info(f'{recursion_depth:03} nothing fits {cluenumber} {direction}')
-    return None
+    if len(trywords) == 0:
+      # Welp, no words in the dictionary fit
+      logging.info(f'{recursion_depth:03} nothing fits {cluenumber} {direction}')
+    continue
 
-  trywords =  [ x for x in trywords if x not in puzzle.data['wordsused'] ]
-  if len(trywords) == 0:
-    # Welp, no words in the dictionary fit that haven't been tried.
+    trywords =  [ x for x in trywords if x not in puzzle.data['wordsused'] ]
+    if len(trywords) == 0:
+      # Welp, no words in the dictionary fit that haven't been tried.
     logging.info(f'{recursion_depth:03} nothing new fits {cluenumber} {direction}')
-    return None
+    continue
 
-  # now we sort trywords so that words that score higher are earlier!
+    # now we sort trywords so that words that score higher are earlier!
 
-  trywords.sort(key=lambda x: puzzle.score_word(x, direction, cluenumber),reverse=True)
+    trywords.sort(key=lambda x: puzzle.score_word(x, direction, cluenumber),reverse=True)
 
-  paths_already_explored = set()
-  for tryword in trywords:
-    tryword_masked = _mask_coldspots(tryword,coldspots)
-    if tryword_masked in paths_already_explored:
-      logging.info(f'{recursion_depth:03} no point in pursuing {tryword}')
-      continue
-    paths_already_explored.add(tryword_masked)
-    puzzle2 = puzzle.copy().inscribe_word(tryword, direction, cluenumber)
+    explored_words_that_fit = set()
+    for tryword in trywords:
+      tryword_masked = _mask_coldspots(tryword,coldspots)
+      if tryword_masked in explored_words_that_fit:
+        logging.info(f'{recursion_depth:03} no point in pursuing {tryword}')
+        continue
+      explored_words_that_fit.add(tryword_masked)
+      puzzle2 = puzzle.copy().inscribe_word(tryword, direction, cluenumber)
 
-    if puzzle2 is None:
-      logging.info(f'{recursion_depth:03} tried {tryword} in {cluenumber} {direction}, but it doesnt fit')
-      continue
+      if puzzle2 is None:
+        raise RuntimeError(f'{recursion_depth:03} tried {tryword} in {cluenumber} {direction}, but it doesnt fit')
 
-#   puzzle2.settitle(f'Depth {recursion_depth:03}')
-    logging.info(f'{recursion_depth:03} {tryword} seems to work in {cluenumber} {direction}!')
-    puzzle3 = solve(puzzle2,recursion_depth+1,wordsource)
-    if puzzle3 is None:
-      logging.info(f"{recursion_depth:03} the recursive call with {direction} {cluenumber} == {tryword} failed")
-      continue
-    logging.info(f"{recursion_depth:03} the recursive call with {direction} {cluenumber} == {tryword} came back happy!")
-    return puzzle3
+      logging.info(f'{recursion_depth:03} {tryword} seems to work in {cluenumber} {direction}!')
+      puzzle3 = solve(puzzle2,recursion_depth+1,wordsource)
+      if puzzle3 is None:
+        logging.info(f"{recursion_depth:03} the recursive call with {direction} {cluenumber} == {tryword} failed")
+        continue
+      logging.info(f"{recursion_depth:03} the recursive call with {direction} {cluenumber} == {tryword} came back happy!")
+      return puzzle3
+
+  return None
+  
 
 
 def main():
