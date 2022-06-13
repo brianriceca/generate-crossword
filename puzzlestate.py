@@ -169,13 +169,18 @@ class Puzzlestate:
             # solution shouldn't have clue numbers in the first cell of answers
             data['solution'][row][col] = Puzzlestate.UNSOLVED
 
-    if 'answerlocations' not in data.keys():
+    if 'answerlocations' not in data:
       data['answerlocations'] = {}
-    if 'answerlengths' not in data.keys():
+    if 'answerlengths' not in data:
       data['answerlengths'] = {}
-    if 'clues_expanded' not in data.keys():
+    if 'clues_expanded' not in data:
       data['clues_expanded'] = {}
 
+    if 'solved_clues' not in data:
+      data['solved_clues'] = list()
+    if 'unsolved_clues' not in data:
+      data['unsolved_clues'] = list(data['clues_expanded'].keys())
+  
     # squirrel away the clue locations; make sure any filled cells are uppercase
 
     for row in range(height):
@@ -213,8 +218,8 @@ class Puzzlestate:
                     for j in range(height)]
 
     _clues_that_touch_clue = dict()
-    for direction in data['clues'].keys():
-      if direction not in Puzzlestate.directions.keys():
+    for direction in data['clues']:
+      if direction not in Puzzlestate.directions:
         raise RuntimeError(f"{direction} is not a direction")
       for clue in data['clues'][direction]:
         cluenumber = int(clue[0])
@@ -244,7 +249,7 @@ class Puzzlestate:
 
     for row in range(height):
       for col in range(width):
-        for cluea,clueb in list(permutations(_clues_that_touch_cell[row][col],2)):
+        for cluea,clueb in list(permutations(data['clues_that_touch_cell'][row][col],2)):
           if cluea not in _clues_that_touch_clue:
             _clues_that_touch_clue[cluea] = set()
           _clues_that_touch_clue[cluea].add(clueb)
@@ -254,20 +259,17 @@ class Puzzlestate:
     # '1 Down': { cluetext: 'Launches', length: 5, [ '1 Across', '14 Across', '17 Across', '20 Across']
 
     for d in data['clues']:
-      for cno in data['clues'][d].keys():
+      for numberpluscluetext in data['clues'][d]:
+        cno = int(numberpluscluetext[0])
+        cluetext = numberpluscluetext[1]
         myclue = Puzzlestate._clue_stringify(cluenumber=cno,direction=d)
         data['clues_expanded'][myclue] = {
-          'cluetext': data['clues'][d][cno],
+          'cluetext': cluetext,
           'wordlength': data['answerlengths'][myclue],
           'location': data['answerlocations'][cno],             # [row,col]
           'intersecting_clues': _clues_that_touch_clue[myclue]
         }
 
-    if 'solved_clues' not in data:
-      data['solved_clues'] = list()
-    if 'unsolved_clues' not in data.keys():
-      data['unsolved_clues'] = list(data['clues_expanded'].keys())
-  
     return cls(data)
 
 #####################
@@ -556,25 +558,7 @@ class Puzzlestate:
 
       # now we gather the constraints, i.e., letters already filled in
 
-      constraints = []
-      row,col = self.data['answerlocations'][cluenumber]
-      if col >= self.width() or row >= self.height():
-        raise RuntimeError(f'answer location for {cluenumber} {direction} is corrupt')
-
-      length = 0
-      while True:
-        if col == self.width() or row == self.height():
-          # remember, rows and cols are numbered from zero
-          break
-        c = self.getchar(row,col)
-        if isinstance(c,str) and c.isalpha():
-          constraints.append([length,c])
-        if isinstance(c,str) and c == Puzzlestate.BARRIER:
-          break
-        row += row_increment
-        col += col_increment
-        length += 1
-      helpful_clue_dict[clue]['constraints'] = constraints
+      helpful_clue_dict[clue]['constraints'] = self.data['clues_expanded'][clue]['constraints']
       helpful_clue_dict[clue]['wordlength'] = length
 
       # and now we gather coldspots, in other words, places in this word that
@@ -737,7 +721,7 @@ class Puzzlestate:
     for c in word:
       self.setchar(row,col,c)
       for clue in self.data['clues_that_touch_cell']:
-        self.clues_expanded[clue]['constraints].add([i,c])
+        self.clues_expanded[clue]['constraints'].add([i,c])
       row += row_increment
       col += col_increment
       i += 1
