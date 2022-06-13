@@ -171,7 +171,7 @@ class Puzzlestate:
     if 'clues_expanded' not in data.keys():
       data['clues_expanded'] = {}
 
-    # squirrel away the clue locations; make sure any filled clues are uppercase
+    # squirrel away the clue locations; make sure any filled cells are uppercase
 
     for row in range(height):
       for col in range(width):
@@ -204,7 +204,7 @@ class Puzzlestate:
     # now squirrel away the length of the answer for each clue,
     # as well as, for each [row,col] all the clues that touch that space
 
-    data['clues_that_touch_cell'] = [[ set() for i in range(width)]
+    _clues_that_touch_cell = [[ set() for i in range(width)]
                     for j in range(height)]
     _clues_that_touch_clue = dict()
 
@@ -221,7 +221,7 @@ class Puzzlestate:
 
         n = 1
         while True:
-          data['clues_that_touch_cell'][row][col].add(Puzzlestate._clue_stringify(direction=direction, cluenumber=cluenumber ))
+          _clues_that_touch_cell[row][col].add(Puzzlestate._clue_stringify(direction=direction, cluenumber=cluenumber ))
           row += Puzzlestate.directions[direction][0]
           col += Puzzlestate.directions[direction][1]
           if (col == width or row == height or
@@ -238,7 +238,7 @@ class Puzzlestate:
 
     for row in range(height):
       for col in range(width):
-        for cluea,clueb in list(permutations(data['clues_that_touch_cell'][row][col],2)):
+        for cluea,clueb in list(permutations(_clues_that_touch_cell[row][col],2)):
           if cluea not in _clues_that_touch_clue:
             _clues_that_touch_clue[cluea] = set()
           _clues_that_touch_clue[cluea].add(clueb)
@@ -253,7 +253,7 @@ class Puzzlestate:
         data['clues_expanded'][myclue] = {
           'cluetext': data['clues'][d][cno],
           'wordlength': data['answerlengths'][myclue],
-          'location': data['answerlocations'][cno] = [row,col]
+          'location': data['answerlocations'][cno],             # [row,col]
           'intersecting_clues': _clues_that_touch_clue[myclue]
         }
 
@@ -541,10 +541,6 @@ class Puzzlestate:
 
    unsolved_clue_list = self.data['unsolved_clues']
 
-    if len(self.data['solved_clues']) == 0:
-      # OK, we are just getting started, so we get to be truly random!
-      cluenumber, direction = Puzzlestate._clue_dictify(random.choice(list(self.data['clues_expanded'].keys())))
-    else:
       # the puzzle will converge faster if we choose a next clue that
       # is already partially completed
       pd, pcno = random.choice( self.data['solved_clues'] )

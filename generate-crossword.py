@@ -39,11 +39,17 @@ def solve(puzzle,recursion_depth,wordsource):
 
   #puzzle.export_puzzlestate()
 
-  for thisclue in puzzle.unsolved_clues():
+  awesomest_first = lambda c: c['wordlength']
+
+  cluelist = sorted(puzzle.unsolved_clues(),key=awesomest_first)
+
+  for thisclue in cluelist:
     if thisclue is None:
       # puzzle is solved! no more unsolved clues
       return puzzle
     cluenumber, direction, wordlength, constraints, coldspots = thisclue
+
+    
 
     if constraints:
       logging.info(f'r{recursion_depth:03} Trying to solve {cluenumber} {direction} with {repr(constraints)}')
