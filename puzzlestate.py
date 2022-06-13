@@ -53,6 +53,11 @@ class Puzzlestate:
     c = s.split()
     return { 'cluenumber': int(c[0]), 'direction': str(c[1]) }
 
+  def _clue_tupleify(s):
+    '''transform a clue as string to a clue as tuple'''
+    c = s.split()
+    return [ int(c[0]), int(c[1]) ]
+
   # Directions are defined as [rowincrement,colincrement]
 
   i_like_vowels = _slurpjson('vowel_friendly_weightings.json')
@@ -204,14 +209,15 @@ class Puzzlestate:
     # now squirrel away the length of the answer for each clue,
     # as well as, for each [row,col] all the clues that touch that space
 
-    _clues_that_touch_cell = [[ set() for i in range(width)]
+    data['clues_that_touch_cell'] = [[ set() for i in range(width)]
                     for j in range(height)]
-    _clues_that_touch_clue = dict()
 
-    for direction in data['clues']:
+    _clues_that_touch_clue = dict()
+    for direction in data['clues'].keys():
       if direction not in Puzzlestate.directions.keys():
         raise RuntimeError(f"{direction} is not a direction")
-      for cluenumber in data['clues'][direction].keys():
+      for clue in data['clues'][direction]:
+        cluenumber = int(clue[0])
         row,col = data['answerlocations'][cluenumber]
         if data['puzzle'][row][col] != cluenumber:
           raise RuntimeError(f"found a mismatch at ({row},{col}): expected {cluenumber}, saw {data['puzzle'][row][col]}")
@@ -221,7 +227,7 @@ class Puzzlestate:
 
         n = 1
         while True:
-          _clues_that_touch_cell[row][col].add(Puzzlestate._clue_stringify(direction=direction, cluenumber=cluenumber ))
+          data['clues_that_touch_cell'][row][col].add(Puzzlestate._clue_stringify(direction=direction, cluenumber=cluenumber ))
           row += Puzzlestate.directions[direction][0]
           col += Puzzlestate.directions[direction][1]
           if (col == width or row == height or
@@ -523,8 +529,8 @@ class Puzzlestate:
 
   def unsolved_clues(self):
     '''
-    return a list of clues to be solved, where each is described as 
-    { 'clue' : str,
+    return a dict of clues to be solved
+    { 'clue' : str : 
       'wordlength' : int,
       'constraints' : [ [ index, whichchar ], ... ],
       'coldspots' : [ index, ... ]
@@ -539,91 +545,82 @@ class Puzzlestate:
       # wow, nothing left to do!
       return None
 
-   unsolved_clue_list = self.data['unsolved_clues']
 
-      # the puzzle will converge faster if we choose a next clue that
-      # is already partially completed
-      pd, pcno = random.choice( self.data['solved_clues'] )
-      cluenumber, direction = random.choice(
-        _clues_that_touch_clue[Puzzlestate._clue_dictify(direction=pd, cluenumber=pcno)]
-        )
-      length = self.data['answerlengths'][Puzzlestate._clue_dictify(direction=direction, cluenumber=cluenumber )]
+    unsolved_clue_list = self.data['unsolved_clues']
+    
+    helpful_clue_dict = {}
 
-      # Wait, what? Which method are we using to choose a clue?
-      # the one above or the one below?
-      # pick a way dammit
+    for clue in unsolved_clue_list:
+      cluenumber, direction = _clue_tupleify(clue)
+      row_increment, col_increment = Puzzlestate.directions[direction]
 
-      thisclue = self.data['unsolved_clues'].pop()
-      direction, cluenumber, length = thisclue
-      if direction not in Puzzlestate.directions.keys():
-        raise RuntimeError(f'{direction} is not a direction') from None
+      # now we gather the constraints, i.e., letters already filled in
 
-    row_increment, col_increment = Puzzlestate.directions[direction]
+      constraints = []
+      row,col = self.data['answerlocations'][cluenumber]
+      if col >= self.width() or row >= self.height():
+        raise RuntimeError(f'answer location for {cluenumber} {direction} is corrupt')
 
-    # now we gather the constraints, i.e., letters already filled in
+      length = 0
+      while True:
+        if col == self.width() or row == self.height():
+          # remember, rows and cols are numbered from zero
+          break
+        c = self.getchar(row,col)
+        if isinstance(c,str) and c.isalpha():
+          constraints.append([length,c])
+        if isinstance(c,str) and c == Puzzlestate.BARRIER:
+          break
+        row += row_increment
+        col += col_increment
+        length += 1
+      helpful_clue_dict[clue]['constraints'] = constraints
+      helpful_clue_dict[clue]['wordlength'] = length
 
-    constraints = []
-    row,col = self.data['answerlocations'][cluenumber]
-    if col >= self.width() or row >= self.height():
-      raise RuntimeError(f'answer location for {cluenumber} {direction} is corrupt')
-
-    length = 0
-    while True:
-      if col == self.width() or row == self.height():
-        # remember, rows and cols are numbered from zero
-        break
-      c = self.getchar(row,col)
-      if isinstance(c,str) and c.isalpha():
-        constraints.append([length,c])
-      if isinstance(c,str) and c == Puzzlestate.BARRIER:
-        break
-      row += row_increment
-      col += col_increment
-      length += 1
-
-    # and now we gather coldspots, in other words, places in this word that
-    # make a downward search path from filling in this clue non-unique.
-    #    ? ? B ?
-    #    ? ? O ?
-    #    # # A #
-    #    ? ? T ?
-    # BOOT would lead to the same searchspace as BOAT searchspace if the third character doesn't matter
-
-    coldspots = []
-    row,col = self.data['answerlocations'][cluenumber]
-    if col >= self.width() or row >= self.height():
-      raise RuntimeError(f'answer location for {cluenumber} {direction} is corrupt')
-    if direction == 'Across':
-      port = lambda row,col: [ row-1, col ]
-      starboard = lambda row,col: [ row+1, col ]
-    elif direction == 'Down':
-      port = lambda row,col: [ row, col+1 ]
-      starboard = lambda row,col: [ row, col-1 ]
-    else:
-      raise RuntimeError(f'what kind of direction is {direction}')
-
-    i = 0
-    while True:
-      if col == self.width() or row == self.height():
-        # remember, rows and cols are numbered from zero
-        break
-      c = self.getchar(row,col)
-      if isinstance(c,str) and c.isalpha():
-        # no preferences about this letter, since it's fixed!
-        break
-      if isinstance(c,str) and c == Puzzlestate.BARRIER:
-        break
-      p = self.safe_getchar(*starboard(row,col))
-      n = self.safe_getchar(*port(row,col))
-
-      if p == Puzzlestate.BARRIER and n == Puzzlestate.BARRIER:
-        coldspots.append(i)
-
-      row += row_increment
-      col += col_increment
-      i += 1
-
-    return unsolved_clue_list
+      # and now we gather coldspots, in other words, places in this word that
+      # make a downward search path from filling in this clue non-unique.
+      #    ? ? B ?
+      #    ? ? O ?
+      #    # # A #
+      #    ? ? T ?
+      # BOOT would lead to the same searchspace as BOAT searchspace if the third character doesn't matter
+  
+      coldspots = []
+      row,col = self.data['answerlocations'][cluenumber]
+      if col >= self.width() or row >= self.height():
+        raise RuntimeError(f'answer location for {cluenumber} {direction} is corrupt')
+      if direction == 'Across':
+        port = lambda row,col: [ row-1, col ]
+        starboard = lambda row,col: [ row+1, col ]
+      elif direction == 'Down':
+        port = lambda row,col: [ row, col+1 ]
+        starboard = lambda row,col: [ row, col-1 ]
+      else:
+        raise RuntimeError(f'what kind of direction is {direction}')
+  
+      i = 0
+      while True:
+        if col == self.width() or row == self.height():
+          # remember, rows and cols are numbered from zero
+          break
+        c = self.getchar(row,col)
+        if isinstance(c,str) and c.isalpha():
+          # no preferences about this letter, since it's fixed!
+          break
+        if isinstance(c,str) and c == Puzzlestate.BARRIER:
+          break
+        p = self.safe_getchar(*starboard(row,col))
+        n = self.safe_getchar(*port(row,col))
+  
+        if p == Puzzlestate.BARRIER and n == Puzzlestate.BARRIER:
+          coldspots.append(i)
+  
+        row += row_increment
+        col += col_increment
+        i += 1
+      helpful_clue_dict[clue]['coldspots'] = coldspots
+  
+    return helpfullist_contents
 
   def getwordsused(self):
     try:
@@ -736,12 +733,21 @@ class Puzzlestate:
     row_increment,col_increment = Puzzlestate.directions[direction]
 
     row,col = self.data['answerlocations'][cluenumber]
+    i = 0
     for c in word:
       self.setchar(row,col,c)
+      for clue in self.data['clues_that_touch_cell']:
+        self.clues_expanded[clue]['constraints].add([i,c])
       row += row_increment
       col += col_increment
+      i += 1
 
     logging.info(f"inscribed {word} into {cluenumber} {direction}")
+
+    # update the constraints in clues_expanded
+
+
+
     self.addwordused(word)
     return self
 
