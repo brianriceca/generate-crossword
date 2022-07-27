@@ -12,12 +12,13 @@ from puzzlestate import Puzzlestate
 
 def main():
   """create a crossword puzzle bracket interactively"""
-  if len(sys.argv) != 3:
-    print(f"usage: {sys.argv[0]} nrows ncols")
+  if len(sys.argv) != 4:
+    print(f"usage: {sys.argv[0]} nrows ncols outfilename")
     sys.exit(1)
   
   height = int(sys.argv[1])
   width = int(sys.argv[2])
+  outfilename = sys.argv[3]
   
   print(f'{height} rows of {width} columns each')
   puzzle = Puzzlestate.blank(height,width)
@@ -38,7 +39,7 @@ def main():
       event == 'Quit' or event.startswith('q')):
       sys.exit(0)
     if event == 'Save':
-      puzzle.writejson('foo.json')
+      puzzle.insert_clue_numbers().writejson(outfilename)
     if bool(re.search(r'^-\d+,\d+-$',cell_row_col := event)):
       youhit = [int(x) for x in re.split(r'[-,]', cell_row_col) if x]
       print(f'You hit row {youhit[0]} column {youhit[1]}')

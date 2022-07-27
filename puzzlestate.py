@@ -12,7 +12,6 @@ import logging
 from itertools import permutations
 
 import svgwrite
-import jsonpickle
 
 script_folder = os.path.dirname(os.path.realpath(__file__))
 
@@ -56,7 +55,7 @@ class Puzzlestate:
   def _clue_tupleify(s):
     '''transform a clue as string to a clue as tuple'''
     c = s.split()
-    return [ int(c[0]), int(c[1]) ]
+    return [ int(c[0]), str(c[1]) ]
 
   # Directions are defined as [rowincrement,colincrement]
 
@@ -286,20 +285,24 @@ class Puzzlestate:
   def getwidth(self):
     return self.width()
 
-  def _getchar(self,rowno,colno):
+  def _getchar(self,rowno,colno,target='solution'):
     return self.data["solution"][rowno][colno]
 
-  def getchar(self,rowno,colno):
+  def getchar(self,rowno,colno,target='solution'):
+    if target not in ('puzzle','solution'):
+      raise RuntimeError(f'expected either puzzle or solution, got {target}')
     if rowno >= self.height() or colno >= self.width():
       raise RuntimeError(f"puzzle is ({self.height()},{self.width()}), and getchar was called on ({rowno},{colno})")
-    return self._getchar(rowno,colno)
+    return self._getchar(rowno,colno,target=target)
 
-  def safe_getchar(self,rowno,colno):
+  def safe_getchar(self,rowno,colno,target='solution'):
+    if target not in ('puzzle','solution'):
+      raise RuntimeError(f'expected either puzzle or solution, got {target}')
     if (rowno >= self.height() or colno >= self.width() or
         rowno < 0 or colno < 0):
       return Puzzlestate.BARRIER
-    result = self._getchar(rowno,colno)
-    if type(result,int):
+    result = self._getchar(rowno,colno,target=target)
+    if isinstance(result,int):
       return Puzzlestate.UNSOLVED
     return result
 
@@ -315,6 +318,20 @@ class Puzzlestate:
     if colno >= self.width():
       raise IndexError("col number " + str(colno) + " too big")
     self.data["solution"][rowno][colno] = c.upper()
+    return self
+
+  def setint(self,rowno,colno,i):
+    rowno = int(rowno)
+    colno = int(colno)
+    if rowno < 0:
+      raise IndexError("row number " + str(rowno) + " too small")
+    if colno < 0:
+      raise IndexError("col number " + str(colno) + " too small")
+    if rowno >= self.height():
+      raise IndexError("row number " + str(rowno) + " too big")
+    if colno >= self.width():
+      raise IndexError("col number " + str(colno) + " too big")
+    self.data["puzzle"][rowno][colno] = int(i)
     return self
 
   def testchar(self,rowno,colno,c):
@@ -339,6 +356,18 @@ class Puzzlestate:
       return True # Yay! It's already the character we want.
     return False # D'oh! The space is already in use with a different letter
 
+  def setbarrier(self,rowno,colno):
+    self.data['puzzle'][rowno][colno] = Puzzlestate.BARRIER
+
+  def clearbarrier(self,rowno,colno):
+    self.data['puzzle'][rowno][colno] = Puzzlestate.UNSOLVED
+
+  def togglebarrier(self,rowno,colno):
+    if self.data['puzzle'][rowno][colno] == Puzzlestate.UNSOLVED:
+      self.data['puzzle'][rowno][colno] = Puzzlestate.BARRIER
+    else:
+      self.data['puzzle'][rowno][colno] = Puzzlestate.UNSOLVED
+
   def gettitle(self):
     if 'title' in self.data:
       if isinstance(self.data['title'], str):
@@ -353,12 +382,13 @@ class Puzzlestate:
     return self
 
   def writejson(self,filename):
-    myjson = jsonpickle.encode(self.data, unpicklable=False)
+    self.data['wordsused'] = list(self.data['wordsused'])
     try:
       with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(myjson, f, indent=2, sort_keys=True)
+        json.dump(self.data, f, indent=2, sort_keys=True)
     except OSError:
       raise RuntimeError(f'Could not write json to {filename}') from None
+    self.data['wordsused'] = set(self.data['wordsused'])
     return self
 
   def writesvg(self,filename,**kwargs):
@@ -553,13 +583,17 @@ class Puzzlestate:
     helpful_clue_dict = {}
 
     for clue in unsolved_clue_list:
-      cluenumber, direction = _clue_tupleify(clue)
+      cluenumber, direction = Puzzlestate._clue_tupleify(clue)
       row_increment, col_increment = Puzzlestate.directions[direction]
 
+      helpful_clue_dict[clue] = {}
       # now we gather the constraints, i.e., letters already filled in
 
-      helpful_clue_dict[clue]['constraints'] = self.data['clues_expanded'][clue]['constraints']
-      helpful_clue_dict[clue]['wordlength'] = length
+      if 'constraints' in self.data['clues_expanded'][clue]:
+        helpful_clue_dict[clue]['constraints'] = self.data['clues_expanded'][clue]['constraints']
+      else:
+        helpful_clue_dict[clue]['constraints'] = []
+      helpful_clue_dict[clue]['wordlength'] = self.data['answerlengths'][clue]
 
       # and now we gather coldspots, in other words, places in this word that
       # make a downward search path from filling in this clue non-unique.
@@ -602,9 +636,9 @@ class Puzzlestate:
         row += row_increment
         col += col_increment
         i += 1
-      helpful_clue_dict[clue]['coldspots'] = coldspots
+      helpful_clue_dict['coldspots'] = coldspots
   
-    return helpfullist_contents
+    return helpful_clue_dict
 
   def getwordsused(self):
     try:
@@ -793,6 +827,24 @@ class Puzzlestate:
       raise RuntimeError("puzzle is size zero?")
     return black_squares / size
 
+  def insert_clue_numbers(self):
+    cluenumber = 1
+    for rowno,row in enumerate(self.data["puzzle"]):
+      for colno,col in enumerate(row):
+        if self.getchar(rowno,colno,target='puzzle') == Puzzlestate.BARRIER:
+          next
+        if ((self.safe_getchar(rowno-1,colno,target='puzzle') == Puzzlestate.BARRIER and
+             self.safe_getchar(rowno+1,colno,target='puzzle') != Puzzlestate.BARRIER) 
+          or
+            (self.safe_getchar(rowno,colno-1,target='puzzle') == Puzzlestate.BARRIER and
+             self.safe_getchar(rowno,colno+1,target='puzzle') != Puzzlestate.BARRIER)): 
+          self.setint(rowno,colno,cluenumber)
+          cluenumber += 1
+    return self
+        
+
+
+  
 
 def main():
   """for testing"""
