@@ -827,17 +827,27 @@ class Puzzlestate:
       raise RuntimeError("puzzle is size zero?")
     return black_squares / size
 
+  def _safe_getcellcontents(self, rowno, colno):
+    if (rowno < 0 or rowno >= self.height() or
+        colno < 0 or colno >= self.height()) :
+      return Puzzlestate.BARRIER
+    else:
+      return self.data['puzzle'][rowno][colno]
+
+
   def insert_clue_numbers(self):
     cluenumber = 1
     for rowno,row in enumerate(self.data["puzzle"]):
       for colno,col in enumerate(row):
-        if self.getchar(rowno,colno,target='puzzle') == Puzzlestate.BARRIER:
+        if (c := self._safe_getcellcontents(rowno,colno)) == Puzzlestate.BARRIER:
           next
-        if ((self.safe_getchar(rowno-1,colno,target='puzzle') == Puzzlestate.BARRIER and
-             self.safe_getchar(rowno+1,colno,target='puzzle') != Puzzlestate.BARRIER) 
+        if isinstance(c,int):
+          raise RuntimeError(f'hey, I found cell R{rowno}C{colno} already occupied by a clue number')
+        if ((self._safe_getcellcontents(rowno-1,colno) == Puzzlestate.BARRIER and
+             self._safe_getcellcontents(rowno+1,colno) != Puzzlestate.BARRIER) 
           or
-            (self.safe_getchar(rowno,colno-1,target='puzzle') == Puzzlestate.BARRIER and
-             self.safe_getchar(rowno,colno+1,target='puzzle') != Puzzlestate.BARRIER)): 
+            (self._safe_getcellcontents(rowno,colno-1) == Puzzlestate.BARRIER and
+             self._safe_getcellcontents(rowno,colno+1) != Puzzlestate.BARRIER)): 
           self.setint(rowno,colno,cluenumber)
           cluenumber += 1
     return self
