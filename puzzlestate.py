@@ -10,6 +10,7 @@ import sys
 import os
 import logging
 from itertools import permutations
+from nltk.corpus import words
 
 import svgwrite
 
@@ -835,6 +836,18 @@ class Puzzlestate:
       return self.data['puzzle'][rowno][colno]
 
 
+  def upsert_clue_text(self,cluenumber,direction,text=''):
+    if direction not in Puzzlestate.directions:
+      raise RuntimeError(f"{direction} is not a direction")
+    if len(text) == 0:
+      text = ' '.join(random.sample(words.words(), 4))
+    if 'clues' not in self.data:
+      self.data['clues'] = dict()
+    if direction not in self.data['clues']:
+      self.data['clues'][direction] = list()
+    self.data['clues'][direction].append([cluenumber,text])
+
+
   def insert_clue_numbers(self):
     cluenumber = 1
     for rowno,row in enumerate(self.data["puzzle"]):
@@ -843,19 +856,22 @@ class Puzzlestate:
           continue
         if isinstance(c,int):
           raise RuntimeError(f'hey, I found cell R{rowno}C{colno} already occupied by a clue number')
-        if ((self._safe_getcellcontents(rowno-1,colno) == Puzzlestate.BARRIER and
-             self._safe_getcellcontents(rowno+1,colno) != Puzzlestate.BARRIER) 
-          or
-            (self._safe_getcellcontents(rowno,colno-1) == Puzzlestate.BARRIER and
-             self._safe_getcellcontents(rowno,colno+1) != Puzzlestate.BARRIER)): 
+        starts_an_across = (self._safe_getcellcontents(rowno-1,colno) == Puzzlestate.BARRIER 
+                            and
+                            self._safe_getcellcontents(rowno+1,colno) != Puzzlestate.BARRIER)
+        starts_a_down = (self._safe_getcellcontents(rowno,colno-1) == Puzzlestate.BARRIER 
+                         and
+                         self._safe_getcellcontents(rowno,colno+1) != Puzzlestate.BARRIER)
+        if starts_an_across or starts_a_down:
           self.setint(rowno,colno,cluenumber)
+        if starts_an_across:
+          self.upsert_clue_text(cluenumber,'Across')
+        elif starts_a_down:
+          self.upsert_clue_text(cluenumber,'Down')
+        if starts_an_across or starts_a_down:
           cluenumber += 1
     return self
         
-
-
-  
-
 def main():
   """for testing"""
   if len(sys.argv) == 1:
