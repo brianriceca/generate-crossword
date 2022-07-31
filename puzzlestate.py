@@ -829,7 +829,7 @@ class Puzzlestate:
 
   def _safe_getcellcontents(self, rowno, colno):
     if (rowno < 0 or rowno >= self.height() or
-        colno < 0 or colno >= self.height()) :
+        colno < 0 or colno >= self.width()) :
       return Puzzlestate.BARRIER
     else:
       return self.data['puzzle'][rowno][colno]
@@ -840,7 +840,7 @@ class Puzzlestate:
     for rowno,row in enumerate(self.data["puzzle"]):
       for colno,col in enumerate(row):
         if (c := self._safe_getcellcontents(rowno,colno)) == Puzzlestate.BARRIER:
-          next
+          continue
         if isinstance(c,int):
           raise RuntimeError(f'hey, I found cell R{rowno}C{colno} already occupied by a clue number')
         if ((self._safe_getcellcontents(rowno-1,colno) == Puzzlestate.BARRIER and
