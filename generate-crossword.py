@@ -68,6 +68,7 @@ def solve(puzzle,recursion_depth,wordsource):
     if len(trywords) == 0:
       # Welp, no words in the dictionary fit that haven't been tried.
       logging.info(f'{recursion_depth:03} nothing new fits {cluenumber} {direction}')
+
       continue
 
     # now we sort trywords so that words that score higher are earlier!

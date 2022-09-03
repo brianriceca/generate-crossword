@@ -10,6 +10,7 @@ import sys
 import os
 import logging
 from itertools import permutations
+from nltk.corpus import words
 
 import svgwrite
 
@@ -827,25 +828,50 @@ class Puzzlestate:
       raise RuntimeError("puzzle is size zero?")
     return black_squares / size
 
+  def _safe_getcellcontents(self, rowno, colno):
+    if (rowno < 0 or rowno >= self.height() or
+        colno < 0 or colno >= self.width()) :
+      return Puzzlestate.BARRIER
+    else:
+      return self.data['puzzle'][rowno][colno]
+
+
+  def upsert_clue_text(self,cluenumber,direction,text=''):
+    if direction not in Puzzlestate.directions:
+      raise RuntimeError(f"{direction} is not a direction")
+    if len(text) == 0:
+      text = ' '.join(random.sample(words.words(), 4))
+    if 'clues' not in self.data:
+      self.data['clues'] = dict()
+    if direction not in self.data['clues']:
+      self.data['clues'][direction] = list()
+    self.data['clues'][direction].append([cluenumber,text])
+
+
   def insert_clue_numbers(self):
     cluenumber = 1
     for rowno,row in enumerate(self.data["puzzle"]):
       for colno,col in enumerate(row):
-        if self.getchar(rowno,colno,target='puzzle') == Puzzlestate.BARRIER:
-          next
-        if ((self.safe_getchar(rowno-1,colno,target='puzzle') == Puzzlestate.BARRIER and
-             self.safe_getchar(rowno+1,colno,target='puzzle') != Puzzlestate.BARRIER) 
-          or
-            (self.safe_getchar(rowno,colno-1,target='puzzle') == Puzzlestate.BARRIER and
-             self.safe_getchar(rowno,colno+1,target='puzzle') != Puzzlestate.BARRIER)): 
+        if (c := self._safe_getcellcontents(rowno,colno)) == Puzzlestate.BARRIER:
+          continue
+        if isinstance(c,int):
+          raise RuntimeError(f'hey, I found cell R{rowno}C{colno} already occupied by a clue number')
+        starts_an_across = (self._safe_getcellcontents(rowno-1,colno) == Puzzlestate.BARRIER 
+                            and
+                            self._safe_getcellcontents(rowno+1,colno) != Puzzlestate.BARRIER)
+        starts_a_down = (self._safe_getcellcontents(rowno,colno-1) == Puzzlestate.BARRIER 
+                         and
+                         self._safe_getcellcontents(rowno,colno+1) != Puzzlestate.BARRIER)
+        if starts_an_across or starts_a_down:
           self.setint(rowno,colno,cluenumber)
+        if starts_an_across:
+          self.upsert_clue_text(cluenumber,'Across')
+        elif starts_a_down:
+          self.upsert_clue_text(cluenumber,'Down')
+        if starts_an_across or starts_a_down:
           cluenumber += 1
     return self
         
-
-
-  
-
 def main():
   """for testing"""
   if len(sys.argv) == 1:
