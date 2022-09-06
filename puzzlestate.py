@@ -10,7 +10,6 @@ import sys
 import os
 import logging
 from itertools import permutations
-from nltk.corpus import words
 
 import svgwrite
 
@@ -637,7 +636,7 @@ class Puzzlestate:
         row += row_increment
         col += col_increment
         i += 1
-      helpful_clue_dict['coldspots'] = coldspots
+      helpful_clue_dict[clue]['coldspots'] = coldspots
   
     return helpful_clue_dict
 
@@ -840,7 +839,7 @@ class Puzzlestate:
     if direction not in Puzzlestate.directions:
       raise RuntimeError(f"{direction} is not a direction")
     if len(text) == 0:
-      text = ' '.join(random.sample(words.words(), 4))
+      text = 'Lorem ipsum'
     if 'clues' not in self.data:
       self.data['clues'] = dict()
     if direction not in self.data['clues']:

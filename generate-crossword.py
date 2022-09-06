@@ -39,9 +39,11 @@ def solve(puzzle,recursion_depth,wordsource):
 
   #puzzle.export_puzzlestate()
 
-  awesomest_first = lambda c: c['wordlength']
+  l = puzzle.unsolved_clues()
+  def _wordlength(w):
+    return l[w]['wordlength']
 
-  cluelist = sorted(puzzle.unsolved_clues(),key=awesomest_first)
+  cluelist = sorted(l, key=_wordlength)
 
   for thisclue in cluelist:
     if thisclue is None:
