@@ -43,8 +43,8 @@ class Puzzlestate:
 
   def _clue_stringify(**kwargs):
     '''transform a clue as dict to a clue as string'''
-    if ('direction' not in kwargs or 'cluenumber' not in kwargs):
-      raise RuntimeError(f'This is not a proper clue: {repr(kwargs)}')
+    assert 'direction' in kwargs and 'cluenumber' in kwargs, \
+      f'This is not a proper clue: {repr(kwargs)}'
     return str(kwargs['cluenumber']) + ' ' + kwargs['direction']
 
   def _clue_dictify(s):
@@ -223,8 +223,8 @@ class Puzzlestate:
       for clue in data['clues'][direction]:
         cluenumber = int(clue[0])
         row,col = data['answerlocations'][cluenumber]
-        if data['puzzle'][row][col] != cluenumber:
-          raise RuntimeError(f"found a mismatch at ({row},{col}): expected {cluenumber}, saw {data['puzzle'][row][col]}")
+        assert data['puzzle'][row][col] == cluenumber, \
+          f"at ({row},{col}): expected {cluenumber}, saw {data['puzzle'][row][col]}"
 
         # now we count the number of blanks from the start of the clue,
         # in the given direction, to the next BARRIER or boundary
@@ -289,15 +289,15 @@ class Puzzlestate:
     return self.data["solution"][rowno][colno]
 
   def getchar(self,rowno,colno,target='solution'):
-    if target not in ('puzzle','solution'):
-      raise RuntimeError(f'expected either puzzle or solution, got {target}')
-    if rowno >= self.height() or colno >= self.width():
-      raise RuntimeError(f"puzzle is ({self.height()},{self.width()}), and getchar was called on ({rowno},{colno})")
+    assert target in ('puzzle','solution'), \
+      f'expected either puzzle or solution, got {target}'
+    assert rowno < self.height() and colno < self.width(), \
+      f"puzzle is ({self.height()},{self.width()}), and getchar was called on ({rowno},{colno})"
     return self._getchar(rowno,colno,target=target)
 
   def safe_getchar(self,rowno,colno,target='solution'):
-    if target not in ('puzzle','solution'):
-      raise RuntimeError(f'expected either puzzle or solution, got {target}')
+    assert target in ('puzzle','solution'), \
+      f'expected either puzzle or solution, got {target}'
     if (rowno >= self.height() or colno >= self.width() or
         rowno < 0 or colno < 0):
       return Puzzlestate.BARRIER
@@ -385,7 +385,8 @@ class Puzzlestate:
     self.data['wordsused'] = list(self.data['wordsused'])
     try:
       with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(self.data, f, indent=2, sort_keys=True)
+        listify = lambda x: list(x)
+        json.dump(self.data, f, indent=2, sort_keys=True, default=listify)
     except OSError:
       raise RuntimeError(f'Could not write json to {filename}') from None
     self.data['wordsused'] = set(self.data['wordsused'])
@@ -607,14 +608,14 @@ class Puzzlestate:
       row,col = self.data['answerlocations'][cluenumber]
       if col >= self.width() or row >= self.height():
         raise RuntimeError(f'answer location for {cluenumber} {direction} is corrupt')
+      assert direction in ('Across','Down'), \
+        f'what kind of direction is {direction}'
       if direction == 'Across':
         port = lambda row,col: [ row-1, col ]
         starboard = lambda row,col: [ row+1, col ]
-      elif direction == 'Down':
+      else:
         port = lambda row,col: [ row, col+1 ]
         starboard = lambda row,col: [ row, col-1 ]
-      else:
-        raise RuntimeError(f'what kind of direction is {direction}')
   
       i = 0
       while True:
@@ -684,14 +685,14 @@ class Puzzlestate:
         return None
 
     row_increment,col_increment = Puzzlestate.directions[direction]
+    assert direction in ('Across','Down'), \
+      f'what kind of direction is {direction}'
     if direction == 'Across':
       port = lambda row,col: [ row, col+1 ]
       starboard = lambda row,col: [ row, col-1 ]
-    elif direction == 'Down':
+    else:
       port = lambda row,col: [ row+1, col ]
       starboard = lambda row,col: [ row-1, col ]
-    else:
-      raise RuntimeError(f'what kind of direction is {direction}')
 
     row,col = self.data['answerlocations'][cluenumber]
 
@@ -772,15 +773,15 @@ class Puzzlestate:
   def is_puzzle_solved(self):
     height = self.height()
     width = self.width()
-    if len(self.data['puzzle']) != height:
-      raise RuntimeError("height of puzzle doesn't match stored height")
-    if len(self.data['solution']) != height:
-      raise RuntimeError("height of solution doesn't match stored height")
+    assert len(self.data['puzzle']) == height, \
+      "height of puzzle doesn't match stored height"
+    assert len(self.data['solution']) == height, \
+      "height of solution doesn't match stored height"
     for i, row in enumerate(self.data['puzzle']):
-      if len(row) != width:
-        raise RuntimeError("row {} of puzzle doesn't match width".format(i))
-      if len(self.data['solution']) != width:
-        raise RuntimeError("row {} of solution doesn't match width".format(i))
+      assert len(row) == width, \
+        f"row {i} of puzzle doesn't match width"
+      assert len(self.data['solution']) == width, \
+        f"row {i} of solution doesn't match width"
       for col in row:
         if (self.data['solution'][row][col] is not None and
             self.data['solution'][row][col] != ' ' and
@@ -803,7 +804,8 @@ class Puzzlestate:
       print()
 
   def json(self):
-    return json.dumps(self.data)
+    listify = lambda x: list(x)
+    return json.dumps(self.data,default=listify)
 
   def print_solution(self):
     for rowno in range(self.height()):
@@ -823,8 +825,7 @@ class Puzzlestate:
     size = self.height() * self.width()
     black_squares = sum ( [ sum ([ 1 for col in row if col == Puzzlestate.BARRIER ])
                                    for row in self.data['puzzle'] ] )
-    if size == 0:
-      raise RuntimeError("puzzle is size zero?")
+    assert size > 0, "puzzle is size zero?"
     return black_squares / size
 
   def _safe_getcellcontents(self, rowno, colno):
