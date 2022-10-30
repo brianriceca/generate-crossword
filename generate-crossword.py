@@ -10,9 +10,19 @@ import logging
 from os import getpid
 from randomword import Randomword
 from puzzlestate import Puzzlestate
+import os.path
 
+home = os.path.expanduser('~')
+confdir = os.path.join(home,'.crossword')
+griddir = os.path.join(confdir,'empty')
+outdir = os.path.join(confdir,'full')
 
-DEFAULT_PUZZLE = '/Users/brice/generate-crossword/samplepuzzles/baby-animals-crossword.ipuz'
+assert os.path.isdir(home), "huh, you are homeless"
+assert os.path.isdir(confdir), "no config dir"
+assert os.path.isdir(griddir), "no dir of empty puzzles"
+assert os.path.isdir(outdir), "no dir to write completed puzzles to"
+
+DEFAULT_PUZZLE = os.path.join(griddir,'baby-animals-crossword.ipuz')
 DEFAULT_WORDSOURCE = 'english1020'
 
 def _checkerboard(row,col):

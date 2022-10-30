@@ -8,11 +8,21 @@ import sys
 import os
 import re
 import sqlite3
+import os.path
 
+home = os.path.expanduser('~')
+confdir = os.path.join(home,'.crossword')
+worddir = os.path.join(confdir,'words')
+
+assert os.path.isdir(home), "huh, you are homeless"
+
+assert os.path.isdir(worddir), "no words dir"
 
 class Randomword:
+  with open(os.path.join(confdir, 'generate-crossword.conf'),'r') as f:
+    config = json.load(f)
 
-  WORDDB="/Users/brice/generate-crossword/words.db"
+  worddb = config['worddb']
   con = None
 
   categories = {}
