@@ -4,6 +4,7 @@ import sqlite3
 import os.path
 import sys
 import argparse
+import unidecode
 
 MAX_TO_INDEX = 8
 
@@ -61,7 +62,7 @@ sql_ddl = ("INSERT INTO words VALUES (?, ?, " +
 
 cur = con.cursor()
 while True:
-  line = args.infile.readline().strip().upper()
+  line = unidecode.unidecode(args.infile.readline().strip().upper())
   if not line:
     break
   print(f'writing {line}')
