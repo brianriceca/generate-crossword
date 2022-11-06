@@ -9,9 +9,8 @@ import copy
 import sys
 import os
 import logging
-from itertools import permutations
-
 import svgwrite
+from itertools import permutations
 
 script_folder = os.path.dirname(os.path.realpath(__file__))
 
@@ -19,7 +18,11 @@ class Puzzlestate:
   """
   operations on a crossword puzzle state
   """
+  with open(os.path.join(os.path.expanduser('~'), 
+                         '.crossword/crossword.conf'),'r') as f:
+    config = json.load(f)
 
+  worddb = config['worddb']
   directions = {
     'Across': [0,1],
     'Down': [1,0]
@@ -30,11 +33,11 @@ class Puzzlestate:
 
   def _slurpjson(fn):
     result = dict()
-    if os.path.isabs(fn):
-      pass
-    else:
-      fn = os.path.join(script_folder,fn)
     try:
+      if not os.path.isabs(fn):
+        fn = os.path.join(os.path.expanduser('~'),
+                         '.crossword',
+                         fn)
       with open(fn,encoding='utf-8') as f:
         result = json.load(f)
     except OSError:
@@ -393,20 +396,20 @@ class Puzzlestate:
     return self
 
   def writesvg(self,filename,**kwargs):
-    if 'showitemnumbers' in kwargs and not isinstance(kwargs['showitemnumbers'], bool):
-        raise RuntimeError('showitemnumbers arg must be True or False')
+    assert 'showcluenumbers' not in kwargs or isinstance(kwargs['showitemnumbers']), \
+        'showcluenumbers arg must be True or False'
 
-    if 'showsolvedcells' in kwargs and not isinstance(kwargs['showsolvedcells'], bool):
-        raise RuntimeError('showsolvedcells arg must be True or False')
+    assert 'showsolvedcells' not in kwargs or isinstance(kwargs['showsolvedcells']), \
+        'showsolvedcells arg must be True or False'
 
-    if 'showtitle' in kwargs and not isinstance(kwargs['showtitle'], bool):
-        raise RuntimeError('showsolvedcells arg must be True or False')
+    assert 'showtitle' not in kwargs or isinstance(kwargs['showtitle']), \
+        'showsolvedcells arg must be True or False'
 
-    if 'highlight_cells' in kwargs and not isinstance(kwargs['highlight_cells'], list):
-        raise RuntimeError('highlight_cells value must be a list of [startingcell,direction,count]')
+    assert 'highlight_cells' not in kwargs or isinstance(kwargs['highlight_cells']), \
+        'highlight_cells value must be a list of [startingcell,direction,count]'
 
-    if 'text_below_puzzle' in kwargs and not isinstance(kwargs['text_below_puzzle'], str):
-        raise RuntimeError('text_below_puzzle arg must be a str')
+    assert 'text_below_puzzle' not in kwargs or isinstance(kwargs['text_below_puzzle']), \
+        'text_below_puzzle arg must be a str'
 
     title = self.gettitle()
     if title is None or title == '':
@@ -513,15 +516,15 @@ class Puzzlestate:
           col += col_increment
           i += 1
 
-    if 'showitemnumbers' in kwargs and kwargs['showitemnumbers']:
-      g = drawing.g(class_='itemnumber',style = _s['itemnumber_style'])
+    if 'showcluenumbers' in kwargs and kwargs['showcluenumbers']:
+      g = drawing.g(class_='cluenumber',style = _s['cluenumber_style'])
       for answer in self.data['answerlocations'].keys():
         row,col = self.data['answerlocations'][answer]
 
         g.add(drawing.text(answer,
                     insert=(
-                            col*_s['cellsize_mm']+_s['side_margin_mm']+_s['offset_itemnum_x'],
-                            row*_s['cellsize_mm']+_s['top_margin_mm']+_s['offset_itemnum_y'],
+                            col*_s['cellsize_mm']+_s['side_margin_mm']+_s['offset_cluenum_x'],
+                            row*_s['cellsize_mm']+_s['top_margin_mm']+_s['offset_cluenum_y'],
                            )))
       drawing.add(g)
 
