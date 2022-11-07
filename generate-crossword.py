@@ -55,11 +55,11 @@ def solve(puzzle,recursion_depth):
   """
 
   puzzle2 = None
-  wf = Wordfountain(0)
+  wf = Wordfountain(seed=0)
 
   #puzzle.export_puzzlestate()
 
-  l = puzzle.unsolved_items()
+  l = puzzle.incomplete_items()
   def _wordlength(w):
     return l[w]['wordlength']
 
@@ -69,15 +69,17 @@ def solve(puzzle,recursion_depth):
     if thisitem is None:
       # puzzle is solved! no more incomplete items
       return puzzle
-    itemnumber, direction, wordlength, constraints, coldspots = thisitem
+    itemnumber, direction = Puzzlestate.item_tupleify(thisitem)
+    wordlength = l[thisitem]['wordlength']
+    constraints = l[thisitem]['constraints']
+    coldspots = l[thisitem]['coldspots']
 
     if constraints:
       logging.info(f'r{recursion_depth:03} Trying to solve {itemnumber} {direction} with {repr(constraints)}')
     else:
      logging.info(f'r{recursion_depth:03} Trying to solve {itemnumber} {direction}')
 
-    trywords = wordspitter.randomwords(wordlength,
-                                     constraints)
+    trywords = wf.matchingwords(wordlength, constraints)
     if len(trywords) == 0:
       # Welp, no words in the dictionary fit
       logging.info(f'{recursion_depth:03} nothing fits {itemnumber} {direction}')

@@ -44,19 +44,20 @@ class Puzzlestate:
       raise RuntimeError(f'Could not read json from {fn}')
     return result
 
-  def _item_stringify(**kwargs):
+  def item_stringify(**kwargs):
     '''transform an item as dict to an item as string'''
     assert 'direction' in kwargs and 'itemnumber' in kwargs, \
       f'This is not a proper item: {repr(kwargs)}'
     return str(kwargs['itemnumber']) + ' ' + kwargs['direction']
 
-  def _item_dictify(s):
+  def item_dictify(s):
     '''transform an item as string to an item as dict'''
     c = s.split()
     return { 'itemnumber': int(c[0]), 'direction': str(c[1]) }
 
-  def _item_tupleify(s):
+  def item_tupleify(s):
     '''transform an item as string to an item as tuple'''
+    print(f'I want to tupleify {s}')
     c = s.split()
     return [ int(c[0]), str(c[1]) ]
 
@@ -234,7 +235,7 @@ class Puzzlestate:
 
         n = 1
         while True:
-          data['items_that_touch_cell'][row][col].add(Puzzlestate._item_stringify(direction=direction, itemnumber=itemnumber ))
+          data['items_that_touch_cell'][row][col].add(Puzzlestate.item_stringify(direction=direction, itemnumber=itemnumber ))
           row += Puzzlestate.directions[direction][0]
           col += Puzzlestate.directions[direction][1]
           if (col == width or row == height or
@@ -242,8 +243,8 @@ class Puzzlestate:
             break
           n += 1
 
-        data['answerlengths'][Puzzlestate._item_stringify(direction=direction, itemnumber=itemnumber)] = n
-        data['incomplete_items'].append(Puzzlestate._item_stringify(direction=direction, itemnumber=itemnumber))
+        data['answerlengths'][Puzzlestate.item_stringify(direction=direction, itemnumber=itemnumber)] = n
+        data['incomplete_items'].append(Puzzlestate.item_stringify(direction=direction, itemnumber=itemnumber))
 
     # now we have, for each cell, a set of items that touch that cell
     # let's transpose that into, for each item, a set of (other) items that touch
@@ -264,7 +265,7 @@ class Puzzlestate:
       for numberpluscluetext in data['clues'][d]:
         cno = int(numberpluscluetext[0])
         cluetext = numberpluscluetext[1]
-        myitem = Puzzlestate._item_stringify(itemnumber=cno,direction=d)
+        myitem = Puzzlestate.item_stringify(itemnumber=cno,direction=d)
         data['items_expanded'][myitem] = {
           'cluetext': cluetext,
           'wordlength': data['answerlengths'][myitem],
@@ -558,7 +559,7 @@ class Puzzlestate:
     drawing.save()
 
   def intersecting_items(self, itemnumber, direction):
-    return self.data[Puzzlestate._item_stringify(
+    return self.data[Puzzlestate.item_stringify(
                                             itemnumber=itemnumber,
                                             direction=direction)]['intersecting_items']
 
@@ -572,10 +573,8 @@ class Puzzlestate:
       'coldspots' : [ index, ... ]
     }
     '''
-    if 'incomplete_items' not in self.data:
-      raise RuntimeError('missing unset data element')
-    if 'completed_items' not in self.data:
-      raise RuntimeError('missing completed_items data element')
+    assert 'incomplete_items' in self.data, 'missing incomplete_items element'
+    assert 'completed_items' in self.data, 'missing completed_items element'
 
     if len(self.data['incomplete_items']) == 0:
       # wow, nothing left to do!
@@ -587,7 +586,7 @@ class Puzzlestate:
     helpful_item_dict = {}
 
     for item in incomplete_item_list:
-      itemnumber, direction = Puzzlestate._item_tupleify(item)
+      itemnumber, direction = Puzzlestate.item_tupleify(item)
       row_increment, col_increment = Puzzlestate.directions[direction]
 
       helpful_item_dict[item] = {}
@@ -679,13 +678,14 @@ class Puzzlestate:
       col += col_increment
     return True
 
-  def score_word(self,words_to_try,direction,itemnumber,safe=True):
+  def score_word(self,word_to_try,direction,itemnumber,safe=True):
 
+    return 1
     if safe:
-      if self.test_word(words_to_try,direction,itemnumber):
+      if self.test_word(word_to_try,direction,itemnumber):
         pass
       else:
-        return None
+        raise RuntimeError(f'{word_to_try} was supposed to fit in {itemnumber} {direction}')
 
     row_increment,col_increment = Puzzlestate.directions[direction]
     assert direction in ('Across','Down'), \
@@ -717,7 +717,7 @@ class Puzzlestate:
                           lambda x: Puzzlestate.i_like_cons[ord(x)-65] ]
 
     score = 0
-    for i,tryword in enumerate(words_to_try):
+    for i,tryword in enumerate(word_to_try):
       letter_to_starboard = self.safe_getchar(*starboard(row,col))
       letter_to_port = self.safe_getchar(*port(row,col))
 #gotta fix this region

@@ -10,53 +10,44 @@ import re
 import sqlite3
 import os.path
 
-home = os.path.expanduser('~')
-confdir = os.path.join(home,'.crossword')
-worddir = os.path.join(confdir,'words')
+class Wordfountain:
+  def __init__(self,worddb=None,seed=0):
+    assert worddb is None or isinstance(worddb, str), \
+      "wordfountain db filename must be a string"
+    if worddb is None or worddb == '':
+      home = os.path.expanduser('~')
+      assert os.path.isdir(home), "you lack a homedir"
+      confdir = os.path.join(home,'.crossword')
+    
+      with open(os.path.join(confdir, 'crossword.conf'),'r') as f:
+        config = json.load(f)
+      worddb = config['worddb']
+    
+    if not os.path.isabs(worddb):
+      worddb = os.path.join(home,'.crossword', worddb)
 
-assert os.path.isdir(home), "huh, you are homeless"
-
-assert os.path.isdir(worddir), "no words dir"
-
-class Randomword:
-  with open(os.path.join(confdir, 'generate-crossword.conf'),'r') as f:
-    config = json.load(f)
-
-  worddb = config['worddb']
-  con = None
-
-  categories = {}
-
-  def __init__(self,seed=0):
     if seed == 0:
       random.seed(int(time.time()))
     else:
       random.seed(seed)
-    self.con = sqlite3.connect('file:' + Randomword.WORDDB + '?mode=ro', uri=True)
 
-  def randomwords(self, desired_length, constraints, category, precedence):
+    self.con = sqlite3.connect('file:' + worddb + '?mode=ro', uri=True)
+    self.con.row_factory = lambda cursor, row: row[0]
 
-  # precedence: order in which to fetch from various dictionaries 
-  # 0 = the themed word for this puzzle
-  # 1 = vanilla words
-  # maybe 2 is proper names, 3 is 2-gram pairs...
+  def matchingwords(self, desired_length, constraints):
+    query = 'SELECT word FROM words WHERE length = ' + str(desired_length)
+    for c in constraints:
+      query += ' AND c' + str(c[0]) + " = '" + str(c[1]) + "'"
 
-    if not isinstance(category, int):
-      raise RuntimeError(f'category {category} is sposta be an int')
-  
-    pattern = list('_' * desired_length)
-    if constraints:
-      for constraint in constraints:
-        n,c = constraint
-        pattern[n] = c
-    
-    pattern = ''.join(pattern)
+    query += ';'
+
     cur = self.con.cursor()
 
-    matchingwords = cur.execute('select word from words where length = ' + str(desired_length) + ' and word like "' + pattern + '" and precedence = "' + str(precedence) + "';").fetchall()
+    matches = cur.execute(query).fetchall()
+    print(f'{query} matches are {matches}')
 
-
-    return matchingwords
+#   random.shuffle(matches)
+    return matches
 
 # end of class methods
 
@@ -65,26 +56,14 @@ def main():
   emptyset = set()
   emptylist = list()
 
-  wordspitter = Randomword(0)
-  words = wordspitter.randomwords(3,emptylist,1)
-  print("random 3 letter word is ")
+  wf = Wordfountain(seed=0)
+
+  words = wf.matchingwords(3,emptylist)
   print(words)
   
-  wordspitter = Randomword(0)
-  constraintlist = [ [ 1, 'I' ] , [ 2, 'X'] ]
-  words = wordspitter.randomwords(3,constraintlist,1)
-  print("random 3 letter word is ")
+  constraintlist = [ [ 1, 'I' ] ]
+  words = wf.matchingwords(3,constraintlist)
   print(words)
-  
-#  words = wordspitter.randomwords(5,emptylist,1)
-#  print("random 5 letter word is ")
-#  print(words)
-  
-#  already_used = set()
-#  already_used.add('PUPPY')
-#  words = wordspitter.randomwords(5,emptylist,1)
-#  print("random 5 letter word is ")
-#  print(words)
   
 if __name__ == '__main__':
     main()
