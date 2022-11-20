@@ -44,7 +44,7 @@ def _checkerboard(row,col):
 def _mask_coldspots(tryword, coldspots):
   tryword_exploded = [ x for x in tryword ]
   for loc in coldspots:
-    tryword_exploded[loc] = "~"
+    tryword_exploded[loc] = Puzzlestate.COLDSPOT
   return ''.join(tryword_exploded)
 
 def solve(puzzle,recursion_depth):

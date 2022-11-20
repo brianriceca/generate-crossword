@@ -28,8 +28,11 @@ class Puzzlestate:
     'Down': [1,0]
   }
 
-  UNSET = '.'
-  BARRIER = '#'
+  UNSET = '.'       # a cell in an item that is not yet determined
+  BARRIER = '#'     # a cell not in an item
+  COLDSPOT = '~'    # a cell in an item that it's pointless to vary 
+                    # because varying it will lead to repeatedly visiting 
+                    # the same search space
 
   def _slurpjson(fn):
     result = dict()
@@ -397,19 +400,19 @@ class Puzzlestate:
     return self
 
   def writesvg(self,filename,**kwargs):
-    assert 'showcluenumbers' not in kwargs or isinstance(kwargs['showitemnumbers']), \
+    assert 'showcluenumbers' not in kwargs or isinstance(kwargs['showitemnumbers'], bool), \
         'showcluenumbers arg must be True or False'
 
-    assert 'showsolvedcells' not in kwargs or isinstance(kwargs['showsolvedcells']), \
+    assert 'showsolvedcells' not in kwargs or isinstance(kwargs['showsolvedcells'], bool), \
         'showsolvedcells arg must be True or False'
 
-    assert 'showtitle' not in kwargs or isinstance(kwargs['showtitle']), \
+    assert 'showtitle' not in kwargs or isinstance(kwargs['showtitle'], bool), \
         'showsolvedcells arg must be True or False'
 
-    assert 'highlight_cells' not in kwargs or isinstance(kwargs['highlight_cells']), \
+    assert 'highlight_cells' not in kwargs or isinstance(kwargs['highlight_cells'], bool), \
         'highlight_cells value must be a list of [startingcell,direction,count]'
 
-    assert 'text_below_puzzle' not in kwargs or isinstance(kwargs['text_below_puzzle']), \
+    assert 'text_below_puzzle' not in kwargs or isinstance(kwargs['text_below_puzzle'], bool), \
         'text_below_puzzle arg must be a str'
 
     title = self.gettitle()
@@ -740,13 +743,13 @@ class Puzzlestate:
 
     return score
 
-  def inscribe_word(self,word,direction,itemnumber,safe=True):
+  def inscribe_word(self,word,direction,itemnumber,be_safe=True):
     """
     returns object containing the word if it was able to inscribe it,
     else returns none
     """
 
-    if safe:
+    if be_safe:
       if self.test_word(word,direction,itemnumber):
         pass
       else:
