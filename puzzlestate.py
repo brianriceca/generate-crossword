@@ -30,6 +30,7 @@ class Puzzlestate:
 
   UNSET = '.'
   BARRIER = '#'
+  COLDSPOT = '~'
 
   def _slurpjson(fn):
     result = dict()
@@ -45,6 +46,8 @@ class Puzzlestate:
     return result
 
   def item_stringify(**kwargs):
+    # TODO: replace this nonsense with a data class 
+    # https://www.youtube.com/watch?v=vBH6GRJ1REM
     '''transform an item as dict to an item as string'''
     assert 'direction' in kwargs and 'itemnumber' in kwargs, \
       f'This is not a proper item: {repr(kwargs)}'
