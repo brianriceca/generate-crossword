@@ -1,0 +1,3 @@
+samplepuzzles/*.out.ipuz
+samplepuzzles/*.svg
+.vscode/launch.json
