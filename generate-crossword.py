@@ -124,13 +124,10 @@ def main():
   """fill a crossword puzzle bracket with random words"""
   logging.basicConfig(filename=f'/tmp/generate-crossword-{getpid()}.log',
                     level=logging.INFO)
-  if len(sys.argv) not in (1, 2):
-    print(f"usage: {sys.argv[0]} [ puzzlefile.json ]")
+  if len(sys.argv) != 2:
+    print(f"usage: {sys.argv[0]} puzzlefile.json ")
     sys.exit(1)
-  if len(sys.argv) == 1:
-    infile = DEFAULT_PUZZLE
-  else:
-    infile = sys.argv[1]
+  infile = sys.argv[1]
 
   puzzle = Puzzlestate.fromjsonfile(infile)
 
