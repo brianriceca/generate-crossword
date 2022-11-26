@@ -11,26 +11,39 @@ import os
 import logging
 import svgwrite
 from itertools import permutations
+from dataclasses import dataclass
 
 script_folder = os.path.dirname(os.path.realpath(__file__))
 
-class Puzzlestate:
-  """
-  operations on a crossword puzzle state
-  """
-  with open(os.path.join(os.path.expanduser('~'), 
-                         '.crossword/crossword.conf'),'r') as f:
-    config = json.load(f)
-
-  worddb = config['worddb']
+class Puzzlegeometry:
+  # Directions are defined as [rowincrement,colincrement]
   directions = {
     'Across': [0,1],
     'Down': [1,0]
   }
 
+@dataclass(frozen=True,order=True)
+class Puzzleitem:
+  itemnumber: int
+  direction: str
+  def __post_init__(self):
+    if self.direction not in Puzzlegeometry.directions:
+      raise ValueError(f'{self.direction} is not a valid direction')
+    if (not isinstance(self.itemnumber,int)) or (self.itemnumber < 1):
+      raise ValueError(f'{self.itemnumber} is not a valid itemnumber')
+
+class Puzzlestate:
+  """
+  operations on a crossword puzzle state
+  """
   UNSET = '.'
   BARRIER = '#'
   COLDSPOT = '~'
+
+  with open(os.path.join(os.path.expanduser('~'), 
+                         '.crossword/crossword.conf'),'r') as f:
+    config = json.load(f)
+  worddb = config['worddb']
 
   def _slurpjson(fn):
     result = dict()
@@ -44,27 +57,6 @@ class Puzzlestate:
     except OSError:
       raise RuntimeError(f'Could not read json from {fn}')
     return result
-
-  def item_stringify(**kwargs):
-    # TODO: replace this nonsense with a data class 
-    # https://www.youtube.com/watch?v=vBH6GRJ1REM
-    '''transform an item as dict to an item as string'''
-    assert 'direction' in kwargs and 'itemnumber' in kwargs, \
-      f'This is not a proper item: {repr(kwargs)}'
-    return str(kwargs['itemnumber']) + ' ' + kwargs['direction']
-
-  def item_dictify(s):
-    '''transform an item as string to an item as dict'''
-    c = s.split()
-    return { 'itemnumber': int(c[0]), 'direction': str(c[1]) }
-
-  def item_tupleify(s):
-    '''transform an item as string to an item as tuple'''
-    print(f'I want to tupleify {s}')
-    c = s.split()
-    return [ int(c[0]), str(c[1]) ]
-
-  # Directions are defined as [rowincrement,colincrement]
 
   i_like_vowels = _slurpjson('vowel_friendly_weightings.json')
   i_like_cons = _slurpjson('consonant_friendly_weightings.json')
@@ -126,7 +118,7 @@ class Puzzlestate:
     # the list of clues for each direction needs to be a dict, but unfortunately
     # the JSON called for by the ipuz standard makes it a list, arrrgh
 
-    for d in Puzzlestate.directions:
+    for d in Puzzlegeometry.directions:
       if not isinstance(data['clues'][d],dict):
         if not isinstance(data['clues'][d],list):
           raise RuntimeError(f"File {filename} has a {d} clues element of type {type(data['clues'][d])}, which is bizarre")
@@ -171,7 +163,9 @@ class Puzzlestate:
       data['solution'] = copy.deepcopy(data['puzzle'])
       for row in range(height):
         for col in range(width):
-          if (isinstance(data['puzzle'][row][col],int)):
+          if (isinstance(data['puzzle'][row][col],int) or
+              (isinstance(data['puzzle'][row][col],str) and 
+               data['puzzle'][row][col].isdigit())):
             # solution shouldn't have item numbers in the first cell of answers
             data['solution'][row][col] = Puzzlestate.UNSET
 
@@ -191,31 +185,28 @@ class Puzzlestate:
 
     for row in range(height):
       for col in range(width):
-        cellcontents = data['puzzle'][row][col]
         # first, let's determine whether what's here is an item number,
         # and make sure it is an integer if it is
-
-        if isinstance(thisitem := cellcontents,int):
-          # cool, no work to do, let's just confirm it's positive
-          if thisitem < 0:
-            raise RuntimeError(f'whoa, item numbers must be positive, unlike [{row},{col}], which is {cellcontents}')
-          elif thisitem == 0:
-            cellcontents = Puzzlestate.UNSET
+        thisitemno = data['puzzle'][row][col]
+        if (isinstance(thisitemno,int) or
+            isinstance(thisitemno,str) and thisitemno.isdigit()):
+          data['puzzle'][row][col] = int(thisitemno)
+          thisitemno = data['puzzle'][row][col]
+          if thisitemno < 0:
+            raise RuntimeError(f'whoa, item numbers must be positive, unlike [{row},{col}], which is {thisitemno}')
+          elif thisitemno == 0:
+            # it's an empty cell
+            data['puzzle'][row][col] = Puzzlestate.UNSET
           else:
-            data['answerlocations'][thisitem] = [row,col]
-        elif isinstance(thisitem,str):
-          if thisitem.isdigit():
-            data['puzzle'][row][col] = int(thisitem)
-            data['answerlocations'][int(thisitem)] = [row,col]
-          elif (cellcontents == Puzzlestate.UNSET or
-                cellcontents == Puzzlestate.BARRIER):
-            pass
-          else:
-            data['puzzle'][row][col] = data['puzzle'][row][col].upper()
-        elif isinstance(cellcontents, dict):
+            # it's the start of a puzzle item, and we need to grab its number
+            data['answerlocations'][thisitemno] = [row,col]
+            data['puzzle'][row][col] = Puzzlestate.UNSET
+        elif isinstance(thisitemno,str):
+          data['puzzle'][row][col] = data['puzzle'][row][col].upper()
+        elif isinstance(thisitemno, dict):
           raise RuntimeError("I don't know how to deal with fancy cells yet")
         else:
-          raise RuntimeError(f"weird cell content: [{row},{col}] is {cellcontents}, type {type(cellcontents)}")
+          raise RuntimeError(f"weird cell content: [{row},{col}] is {thisitemno}, type {type(cellcontents)}")
 
     # now squirrel away the length of the answer for each item,
     # as well as, for each [row,col] all the items that touch that space
@@ -225,29 +216,30 @@ class Puzzlestate:
 
     _items_that_touch_item = dict()
     for direction in data['clues']:
-      if direction not in Puzzlestate.directions:
+      if direction not in Puzzlegeometry.directions:
         raise RuntimeError(f"{direction} is not a direction")
       for item in data['clues'][direction]:
         itemnumber = int(item[0])
         row,col = data['answerlocations'][itemnumber]
-        assert data['puzzle'][row][col] == itemnumber, \
-          f"at ({row},{col}): expected {itemnumber}, saw {data['puzzle'][row][col]}"
+        assert data['puzzle'][row][col] == Puzzlestate.UNSET, \
+          f"at ({row},{col}): expected {Puzzlestate.UNSET}, saw {data['puzzle'][row][col]}"
 
         # now we count the number of blanks from the start of the item,
         # in the given direction, to the next BARRIER or boundary
 
+        thisitem = Puzzleitem(itemnumber=itemnumber, direction=direction)
         n = 1
         while True:
-          data['items_that_touch_cell'][row][col].add(Puzzlestate.item_stringify(direction=direction, itemnumber=itemnumber ))
-          row += Puzzlestate.directions[direction][0]
-          col += Puzzlestate.directions[direction][1]
+          data['items_that_touch_cell'][row][col].add(thisitem)
+          row += Puzzlegeometry.directions[direction][0]
+          col += Puzzlegeometry.directions[direction][1]
           if (col == width or row == height or
               data['puzzle'][row][col] == Puzzlestate.BARRIER):
             break
           n += 1
 
-        data['answerlengths'][Puzzlestate.item_stringify(direction=direction, itemnumber=itemnumber)] = n
-        data['incomplete_items'].append(Puzzlestate.item_stringify(direction=direction, itemnumber=itemnumber))
+        data['answerlengths'][thisitem] = n
+        data['incomplete_items'].append(thisitem)
 
     # now we have, for each cell, a set of items that touch that cell
     # let's transpose that into, for each item, a set of (other) items that touch
@@ -268,7 +260,7 @@ class Puzzlestate:
       for numberpluscluetext in data['clues'][d]:
         cno = int(numberpluscluetext[0])
         cluetext = numberpluscluetext[1]
-        myitem = Puzzlestate.item_stringify(itemnumber=cno,direction=d)
+        myitem = Puzzleitem(itemnumber=cno,direction=d)
         data['items_expanded'][myitem] = {
           'cluetext': cluetext,
           'wordlength': data['answerlengths'][myitem],
@@ -355,8 +347,8 @@ class Puzzlestate:
     c2 = self.getchar(rowno,colno)
     if c2 is None:
       return True # Yay!  It's not been filled in yet
-    if isinstance(c2,int):
-      return True # It's either a 0 for an empty space or else an item number
+    if isinstance(c2,int) or (isinstance(c2,str) and c2.isdigit()):
+      return True # It's an item number
     if isinstance(c2,str) and c2 == Puzzlestate.UNSET:
       return True # Yay!  It's not been filled in yet
     if isinstance(c2,str) and c2.upper() == c.upper():
@@ -388,31 +380,37 @@ class Puzzlestate:
       raise RuntimeError('settitle called with something not a string')
     return self
 
+  def _listify(x):
+    if isinstance(x,Puzzleitem):
+      return [ x.itemnumber, x.direction ]
+    else:
+      return list(x)
+
   def writejson(self,filename):
     self.data['wordsused'] = list(self.data['wordsused'])
     try:
       with open(filename, 'w', encoding='utf-8') as f:
-        listify = lambda x: list(x)
-        json.dump(self.data, f, indent=2, sort_keys=True, default=listify)
+        json.dump(self.data, f, indent=2, sort_keys=True, skipkeys=True, default=Puzzlestate._listify)
+    # TODO: stringify Puzzleitem's so that they can be saved (and so we don't need skipkeys)
     except OSError:
       raise RuntimeError(f'Could not write json to {filename}') from None
     self.data['wordsused'] = set(self.data['wordsused'])
     return self
 
   def writesvg(self,filename,**kwargs):
-    assert 'showcluenumbers' not in kwargs or isinstance(kwargs['showitemnumbers']), \
+    assert 'showcluenumbers' not in kwargs or isinstance(kwargs['showitemnumbers'],bool), \
         'showcluenumbers arg must be True or False'
 
-    assert 'showsolvedcells' not in kwargs or isinstance(kwargs['showsolvedcells']), \
+    assert 'showsolvedcells' not in kwargs or isinstance(kwargs['showsolvedcells'],bool), \
         'showsolvedcells arg must be True or False'
 
-    assert 'showtitle' not in kwargs or isinstance(kwargs['showtitle']), \
+    assert 'showtitle' not in kwargs or isinstance(kwargs['showtitle'],bool), \
         'showsolvedcells arg must be True or False'
 
-    assert 'highlight_cells' not in kwargs or isinstance(kwargs['highlight_cells']), \
+    assert 'highlight_cells' not in kwargs or isinstance(kwargs['highlight_cells'],list), \
         'highlight_cells value must be a list of [startingcell,direction,count]'
 
-    assert 'text_below_puzzle' not in kwargs or isinstance(kwargs['text_below_puzzle']), \
+    assert 'text_below_puzzle' not in kwargs or isinstance(kwargs['text_below_puzzle'],str), \
         'text_below_puzzle arg must be a str'
 
     title = self.gettitle()
@@ -425,67 +423,60 @@ class Puzzlestate:
       else:
         raise RuntimeError('titles need to be strings')
 
-    _fn = 'svg_params.json'
-    try:
-      with open(_fn,encoding='utf-8') as f:
-        _s = json.load(f)
-    except OSError:
-      raise RuntimeError(f'Could not read my SVG params from {_fn}')
-
     _w = self.width()
     _h = self.height()
     if 'showtitle' not in kwargs or not kwargs['showtitle']:
-      _s['title_height_mm'] = 0
+      Puzzlestate.config['title_height_mm'] = 0
 
-    _s['top_margin_mm'] = _s['cellsize_mm'] + _s['title_height_mm']
-    _s['bottom_margin_mm'] = _s['cellsize_mm']
-    _s['side_margin_mm'] = _s['cellsize_mm']
+    Puzzlestate.config['top_margin_mm'] = Puzzlestate.config['cellsize_mm'] + Puzzlestate.config['title_height_mm']
+    Puzzlestate.config['bottom_margin_mm'] = Puzzlestate.config['cellsize_mm']
+    Puzzlestate.config['side_margin_mm'] = Puzzlestate.config['cellsize_mm']
 
-    _s['width_mm'] = _s['cellsize_mm']*_w + 2*_s['side_margin_mm']
-    _s['height_mm'] = (_s['cellsize_mm']*_h +
-                       _s['top_margin_mm'] +
-                       _s['bottom_margin_mm'])
+    Puzzlestate.config['width_mm'] = Puzzlestate.config['cellsize_mm']*_w + 2*Puzzlestate.config['side_margin_mm']
+    Puzzlestate.config['height_mm'] = (Puzzlestate.config['cellsize_mm']*_h +
+                       Puzzlestate.config['top_margin_mm'] +
+                       Puzzlestate.config['bottom_margin_mm'])
 
     drawing = svgwrite.Drawing(filename,
-              size=(f"{_s['width_mm']}mm",f"{_s['height_mm']}mm"))
-    drawing.viewbox(0, 0, _s['height_mm'], _s['width_mm'])
+              size=(f"{Puzzlestate.config['width_mm']}mm",f"{Puzzlestate.config['height_mm']}mm"))
+    drawing.viewbox(0, 0, Puzzlestate.config['height_mm'], Puzzlestate.config['width_mm'])
 
     # draw interior horizontal lines
     for i in range(1,_h):
-      y = _s['top_margin_mm'] + i * _s['cellsize_mm']
+      y = Puzzlestate.config['top_margin_mm'] + i * Puzzlestate.config['cellsize_mm']
       drawing.add(drawing.line(
-                          start=(_s['side_margin_mm'], y),
-                          end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], y),
-                          stroke=_s['line_color'],stroke_width=_s['line_width']))
+                          start=(Puzzlestate.config['side_margin_mm'], y),
+                          end=(Puzzlestate.config['cellsize_mm']*_w+Puzzlestate.config['side_margin_mm'], y),
+                          stroke=Puzzlestate.config['line_color'],stroke_width=Puzzlestate.config['line_width']))
 
     # draw top and bottom lines
     drawing.add(drawing.line(
-                        start=(_s['side_margin_mm'], _s['top_margin_mm']+_h*_s['cellsize_mm']),
-                        end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], _s['top_margin_mm']+_h*_s['cellsize_mm']),
-                        stroke=_s['line_color'],stroke_width=_s['line_width'], style=_s['outer_line_style']))
+                        start=(Puzzlestate.config['side_margin_mm'], Puzzlestate.config['top_margin_mm']+_h*Puzzlestate.config['cellsize_mm']),
+                        end=(Puzzlestate.config['cellsize_mm']*_w+Puzzlestate.config['side_margin_mm'], Puzzlestate.config['top_margin_mm']+_h*Puzzlestate.config['cellsize_mm']),
+                        stroke=Puzzlestate.config['line_color'],stroke_width=Puzzlestate.config['line_width'], style=Puzzlestate.config['outer_line_style']))
 
     drawing.add(drawing.line(
-                        start=(_s['side_margin_mm'], _s['top_margin_mm']),
-                        end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], _s['top_margin_mm']),
-                        stroke=_s['line_color'],stroke_width=_s['line_width'], style=_s['outer_line_style']))
+                        start=(Puzzlestate.config['side_margin_mm'], Puzzlestate.config['top_margin_mm']),
+                        end=(Puzzlestate.config['cellsize_mm']*_w+Puzzlestate.config['side_margin_mm'], Puzzlestate.config['top_margin_mm']),
+                        stroke=Puzzlestate.config['line_color'],stroke_width=Puzzlestate.config['line_width'], style=Puzzlestate.config['outer_line_style']))
 
     # draw vertical lines
     for i in range(1,_w):
-      x = _s['side_margin_mm'] + i * _s['cellsize_mm']
+      x = Puzzlestate.config['side_margin_mm'] + i * Puzzlestate.config['cellsize_mm']
       drawing.add(drawing.line(
-                          start=(x,_s['top_margin_mm']),
-                          end=(x,_s['cellsize_mm']*_h+_s['top_margin_mm']),
+                          start=(x,Puzzlestate.config['top_margin_mm']),
+                          end=(x,Puzzlestate.config['cellsize_mm']*_h+Puzzlestate.config['top_margin_mm']),
 
-                          stroke=_s['line_color'],stroke_width=_s['line_width']))
+                          stroke=Puzzlestate.config['line_color'],stroke_width=Puzzlestate.config['line_width']))
 
     drawing.add(drawing.line(
-                        start=(_s['side_margin_mm'],_s['top_margin_mm']),
-                        end=(_s['side_margin_mm'], _s['cellsize_mm']*_h+_s['top_margin_mm']),
-                        stroke=_s['line_color'],stroke_width=1,style=_s['outer_line_style']))
+                        start=(Puzzlestate.config['side_margin_mm'],Puzzlestate.config['top_margin_mm']),
+                        end=(Puzzlestate.config['side_margin_mm'], Puzzlestate.config['cellsize_mm']*_h+Puzzlestate.config['top_margin_mm']),
+                        stroke=Puzzlestate.config['line_color'],stroke_width=1,style=Puzzlestate.config['outer_line_style']))
     drawing.add(drawing.line(
-                        start=(_s['cellsize_mm']*_w+_s['side_margin_mm'],_s['top_margin_mm']),
-                        end=(_s['cellsize_mm']*_w+_s['side_margin_mm'], _s['cellsize_mm']*_h + _s['top_margin_mm']),
-                        stroke=_s['line_color'],stroke_width=_s['line_width'],style=_s['outer_line_style']))
+                        start=(Puzzlestate.config['cellsize_mm']*_w+Puzzlestate.config['side_margin_mm'],Puzzlestate.config['top_margin_mm']),
+                        end=(Puzzlestate.config['cellsize_mm']*_w+Puzzlestate.config['side_margin_mm'], Puzzlestate.config['cellsize_mm']*_h + Puzzlestate.config['top_margin_mm']),
+                        stroke=Puzzlestate.config['line_color'],stroke_width=Puzzlestate.config['line_width'],style=Puzzlestate.config['outer_line_style']))
 
 
     # insert black boxes
@@ -494,54 +485,54 @@ class Puzzlestate:
         if self.getchar(row,col) == Puzzlestate.BARRIER:
           drawing.add(drawing.rect(
                            insert=(
-                                   col*_s['cellsize_mm']+_s['side_margin_mm'],
-                                   row*_s['cellsize_mm']+_s['top_margin_mm']
+                                   col*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['side_margin_mm'],
+                                   row*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['top_margin_mm']
                                   ),
-                           size=(_s['cellsize_mm'],_s['cellsize_mm']),
-                           fill=_s['block_color']))
+                           size=(Puzzlestate.config['cellsize_mm'],Puzzlestate.config['cellsize_mm']),
+                           fill=Puzzlestate.config['block_color']))
 
     # insert highlights
 
     if 'highlight_cells' in kwargs:
       for rc, direction, cellcount in kwargs['highlight_cells']:
         row,col = rc
-        row_increment, col_increment = Puzzlestate.directions[direction]
+        row_increment, col_increment = Puzzlegeometry.directions[direction]
 
         i = 0
         while i < cellcount:
           drawing.add(drawing.rect(
                            insert=(
-                                   col*_s['cellsize_mm']+_s['side_margin_mm'],
-                                   row*_s['cellsize_mm']+_s['top_margin_mm']
+                                   col*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['side_margin_mm'],
+                                   row*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['top_margin_mm']
                                   ),
-                           size=(_s['cellsize_mm'],_s['cellsize_mm']),
-                           fill=_s['highlight_color']))
+                           size=(Puzzlestate.config['cellsize_mm'],Puzzlestate.config['cellsize_mm']),
+                           fill=Puzzlestate.config['highlight_color']))
           row += row_increment
           col += col_increment
           i += 1
 
     if 'showcluenumbers' in kwargs and kwargs['showcluenumbers']:
-      g = drawing.g(class_='cluenumber',style = _s['cluenumber_style'])
+      g = drawing.g(class_='cluenumber',style = Puzzlestate.config['cluenumber_style'])
       for answer in self.data['answerlocations'].keys():
         row,col = self.data['answerlocations'][answer]
 
         g.add(drawing.text(answer,
                     insert=(
-                            col*_s['cellsize_mm']+_s['side_margin_mm']+_s['offset_cluenum_x'],
-                            row*_s['cellsize_mm']+_s['top_margin_mm']+_s['offset_cluenum_y'],
+                            col*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['side_margin_mm']+Puzzlestate.config['offset_cluenum_x'],
+                            row*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['top_margin_mm']+Puzzlestate.config['offset_cluenum_y'],
                            )))
       drawing.add(g)
 
     if 'showsolvedcells' in kwargs and kwargs['showsolvedcells']:
-      g = drawing.g(class_='solvedcell', style = _s['solution_style'])
+      g = drawing.g(class_='solvedcell', style = Puzzlestate.config['solution_style'])
       for row in range(_h):
         for col in range(_w):
           c = self.getchar(row,col)
           if isinstance(c,str) and c.isalpha():
             g.add(drawing.text(c,
                     insert=(
-                            col*_s['cellsize_mm']+_s['side_margin_mm']+_s['offset_solution_x'],
-                            row*_s['cellsize_mm']+_s['top_margin_mm']+_s['offset_solution_y'],
+                            col*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['side_margin_mm']+Puzzlestate.config['offset_solution_x'],
+                            row*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['top_margin_mm']+Puzzlestate.config['offset_solution_y'],
                            )))
       drawing.add(g)
 
@@ -550,11 +541,11 @@ class Puzzlestate:
         mytitle = self.gettitle()
       else:
         mytitle = title
-      g = drawing.g(class_='title', style = _s['title_style'])
+      g = drawing.g(class_='title', style = Puzzlestate.config['title_style'])
       g.add(drawing.text(title,
                     insert=(
-                            _s['side_margin_mm'],
-                            _s['title_height_mm']
+                            Puzzlestate.config['side_margin_mm'],
+                            Puzzlestate.config['title_height_mm']
                            )))
       drawing.add(g)
 
@@ -562,9 +553,8 @@ class Puzzlestate:
     drawing.save()
 
   def intersecting_items(self, itemnumber, direction):
-    return self.data[Puzzlestate.item_stringify(
-                                            itemnumber=itemnumber,
-                                            direction=direction)]['intersecting_items']
+    return self.data[Puzzleitem(itemnumber=itemnumber,
+                                direction=direction)]['intersecting_items']
 
 
   def incomplete_items(self):
@@ -589,8 +579,7 @@ class Puzzlestate:
     helpful_item_dict = {}
 
     for item in incomplete_item_list:
-      itemnumber, direction = Puzzlestate.item_tupleify(item)
-      row_increment, col_increment = Puzzlestate.directions[direction]
+      row_increment, col_increment = directions[item.direction]
 
       helpful_item_dict[item] = {}
       # now we gather the constraints, i.e., letters already filled in
@@ -607,15 +596,14 @@ class Puzzlestate:
       #    ? ? O ?
       #    # # A #
       #    ? ? T ?
-      # BOOT would lead to the same searchspace as BOAT searchspace if the third character doesn't matter
+      # BOOT would lead to the same searchspace as BOAT does if the third 
+      # character doesn't matter
   
       coldspots = []
-      row,col = self.data['answerlocations'][itemnumber]
+      row,col = self.data['answerlocations'][item.itemnumber]
       if col >= self.width() or row >= self.height():
-        raise RuntimeError(f'answer location for {itemnumber} {direction} is corrupt')
-      assert direction in ('Across','Down'), \
-        f'what kind of direction is {direction}'
-      if direction == 'Across':
+        raise RuntimeError(f'answer location for {item.itemnumber} {item.direction} is corrupt')
+      if item.direction == 'Across':
         port = lambda row,col: [ row-1, col ]
         starboard = lambda row,col: [ row+1, col ]
       else:
@@ -762,7 +750,7 @@ class Puzzlestate:
     for c in word:
       self.setchar(row,col,c)
       for item in self.data['items_that_touch_cell']:
-        self.items_expanded[item]['constraints'].add([i,c])
+        self.data['items_expanded'][item]['constraints'].add([i,c])
       row += row_increment
       col += col_increment
       i += 1
