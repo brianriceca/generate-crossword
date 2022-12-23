@@ -9,7 +9,7 @@ import sys
 import logging
 from os import getpid
 from wordfountain import Wordfountain
-from puzzlestate import Puzzlestate
+from puzzlestate import Puzzlestate, Puzzleitem
 import os.path
 import argparse
 
@@ -66,10 +66,11 @@ def solve(puzzle,recursion_depth):
   itemlist = sorted(l, key=_wordlength)
 
   for thisitem in itemlist:
+    itemnumber = thisitem.itemnumber
+    direction = thisitem.direction
     if thisitem is None:
       # puzzle is solved! no more incomplete items
       return puzzle
-    itemnumber, direction = Puzzlestate.item_tupleify(thisitem)
     wordlength = l[thisitem]['wordlength']
     constraints = l[thisitem]['constraints']
     coldspots = l[thisitem]['coldspots']
