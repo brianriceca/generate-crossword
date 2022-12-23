@@ -45,7 +45,7 @@ class Puzzlestate:
     config = json.load(f)
   worddb = config['worddb']
 
-  def _slurpjson(fn):
+  def _slurpjson(fn: str):
     result = dict()
     try:
       if not os.path.isabs(fn):
@@ -387,6 +387,19 @@ class Puzzlestate:
       return list(x)
 
   def writejson(self,filename):
+    tempcopy = copy.deepcopy(self.data)
+    tempcopy['wordsused'] = list(tempcopy['wordsused'])
+    tempcopy['answerlengths'] = {f'{k.itemnumber} {k.direction}': tempcopy['answerlengths'][k] for k in tempcopy['answerlengths']}
+    try:
+      with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(self.data, f, indent=2, sort_keys=True, skipkeys=True, default=Puzzlestate._listify)
+    # TODO: stringify Puzzleitem's so that they can be saved (and so we don't need skipkeys)
+    except OSError:
+      raise RuntimeError(f'Could not write json to {filename}') from None
+    self.data['wordsused'] = set(self.data['wordsused'])
+    return self
+
+  def writejson(self,filename):
     self.data['wordsused'] = list(self.data['wordsused'])
     try:
       with open(filename, 'w', encoding='utf-8') as f:
@@ -579,7 +592,7 @@ class Puzzlestate:
     helpful_item_dict = {}
 
     for item in incomplete_item_list:
-      row_increment, col_increment = directions[item.direction]
+      row_increment, col_increment = Puzzlegeometry.directions[item.direction]
 
       helpful_item_dict[item] = {}
       # now we gather the constraints, i.e., letters already filled in
@@ -651,7 +664,7 @@ class Puzzlestate:
 
   def test_word(self,word,direction,itemnumber):
 
-    row_increment,col_increment = Puzzlestate.directions[direction]
+    row_increment,col_increment = Puzzlegeometry.directions[direction]
 
     row,col = self.data['answerlocations'][itemnumber]
     for c in word:
@@ -743,7 +756,7 @@ class Puzzlestate:
       else:
         return None
 
-    row_increment,col_increment = Puzzlestate.directions[direction]
+    row_increment,col_increment = Puzzlegeometry.directions[direction]
 
     row,col = self.data['answerlocations'][itemnumber]
     i = 0
