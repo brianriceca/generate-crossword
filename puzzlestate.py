@@ -26,11 +26,18 @@ class Puzzlegeometry:
 class Puzzleitem:
   itemnumber: int
   direction: str
+  def fromlist(aslist):
+    return Puzzleitem(itemnumber=int(aslist[0]),direction=str(aslist[1]))
+  def fromstr(asstr):
+    i,d = asstr.split()
+    return Puzzleitem(itemnumber=int(i),direction=str(d))
   def __post_init__(self):
     if self.direction not in Puzzlegeometry.directions:
       raise ValueError(f'{self.direction} is not a valid direction')
     if (not isinstance(self.itemnumber,int)) or (self.itemnumber < 1):
       raise ValueError(f'{self.itemnumber} is not a valid itemnumber')
+  def __repr__(self):
+    return f'{self.itemnumber} {self.direction}'
 
 class Puzzlestate:
   """
@@ -762,7 +769,9 @@ class Puzzlestate:
     i = 0
     for c in word:
       self.setchar(row,col,c)
-      for item in self.data['items_that_touch_cell']:
+      for item in self.data['items_that_touch_cell'][row][col]:
+        if 'constraints' not in self.data['items_expanded'][item]:
+          self.data['items_expanded'][item]['constraints'] = set()
         self.data['items_expanded'][item]['constraints'].add([i,c])
       row += row_increment
       col += col_increment

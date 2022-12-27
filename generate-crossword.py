@@ -71,14 +71,22 @@ def solve(puzzle,recursion_depth):
     if thisitem is None:
       # puzzle is solved! no more incomplete items
       return puzzle
+    assert 'wordlength' in l[thisitem], f'incomplete_items[{thisitem}] lacks wordlength'
     wordlength = l[thisitem]['wordlength']
-    constraints = l[thisitem]['constraints']
-    coldspots = l[thisitem]['coldspots']
+    if 'constraints' in l[thisitem]:
+      constraints = l[thisitem]['constraints']
+    else:
+      constraints = None
+
+    if 'coldspots' in l[thisitem]:
+      coldspots = l[thisitem]['coldspots']
+    else:
+      coldspots = None
 
     if constraints:
       logging.info(f'r{recursion_depth:03} Trying to solve {itemnumber} {direction} with {repr(constraints)}')
     else:
-     logging.info(f'r{recursion_depth:03} Trying to solve {itemnumber} {direction}')
+      logging.info(f'r{recursion_depth:03} Trying to solve {itemnumber} {direction}')
 
     trywords = wf.matchingwords(wordlength, constraints)
     if len(trywords) == 0:
@@ -86,7 +94,7 @@ def solve(puzzle,recursion_depth):
       logging.info(f'{recursion_depth:03} nothing fits {itemnumber} {direction}')
       continue
 
-    trywords =  [ x for x in trywords if x not in puzzle.data['wordsused'] ]
+    trywords =  [ x for x in trywords if x not in puzzle.getwordsused() ]
     if len(trywords) == 0:
       # Welp, no words in the dictionary fit that haven't been tried.
       logging.info(f'{recursion_depth:03} nothing new fits {itemnumber} {direction}')
