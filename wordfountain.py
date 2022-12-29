@@ -9,6 +9,7 @@ import os
 import re
 import sqlite3
 import os.path
+from typing import List, Tuple
 
 class Wordfountain:
   def __init__(self,worddb=None,seed=0):
@@ -34,7 +35,7 @@ class Wordfountain:
     self.con = sqlite3.connect('file:' + worddb + '?mode=ro', uri=True)
     self.con.row_factory = lambda cursor, row: row[0]
 
-  def matchingwords(self, desired_length, constraints):
+  def matchingwords(self, desired_length: int, constraints: List[Tuple]) -> List:
     query = 'SELECT word FROM words WHERE length = ' + str(desired_length)
     for c in constraints:
       query += ' AND c' + str(c[0]) + " = '" + str(c[1]) + "'"
