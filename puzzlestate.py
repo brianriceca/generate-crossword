@@ -26,6 +26,7 @@ class Puzzlegeometry:
 class Puzzleitem:
   itemnumber: int
   direction: str
+  length: int = 0
   def fromlist(aslist):
     return Puzzleitem(itemnumber=int(aslist[0]),direction=str(aslist[1]))
   def fromstr(asstr):
@@ -34,8 +35,10 @@ class Puzzleitem:
   def __post_init__(self):
     if self.direction not in Puzzlegeometry.directions:
       raise ValueError(f'{self.direction} is not a valid direction')
-    if (not isinstance(self.itemnumber,int)) or (self.itemnumber < 1):
+    if not isinstance(self.itemnumber,int) or (self.itemnumber < 1):
       raise ValueError(f'{self.itemnumber} is not a valid itemnumber')
+    if not isinstance(self.length,int) or (self.length < 0):
+      raise ValueError(f'{self.length} is not a valid item length')
   def __repr__(self):
     return f'{self.itemnumber} {self.direction}'
 
@@ -571,6 +574,9 @@ class Puzzlestate:
 
 
     drawing.save()
+
+  def answerlength(item):
+    return self.data['answerlengths'][item]
 
   def intersecting_items(self, itemnumber, direction):
     return self.data[Puzzleitem(itemnumber=itemnumber,
