@@ -22,6 +22,13 @@ class Puzzlegeometry:
     'Down': [1,0]
   }
 
+def _otherdirection(d):
+  assert isinstance(d,str), f"{d} must be a string but is {type(d)}"
+  assert (d == 'Across') or (d == 'Down'), f"only valid directions are Across and Down, not {d}"
+  if d == 'Across':
+    return 'Down'
+  return 'Across'
+
 @dataclass(frozen=True,order=True)
 class Puzzleitem:
   itemnumber: int
@@ -35,7 +42,7 @@ class Puzzleitem:
   def __post_init__(self):
     if self.direction not in Puzzlegeometry.directions:
       raise ValueError(f'{self.direction} is not a valid direction')
-    if not isinstance(self.itemnumber,int) or (self.itemnumber < 1):
+    if not isinstance(self.itemnumber,int) or (self.itemnumber < 0):
       raise ValueError(f'{self.itemnumber} is not a valid itemnumber')
     if not isinstance(self.length,int) or (self.length < 0):
       raise ValueError(f'{self.length} is not a valid item length')
@@ -191,7 +198,9 @@ class Puzzlestate:
     if 'incomplete_items' not in data:
       data['incomplete_items'] = list(data['items_expanded'].keys())
   
-    # squirrel away the item locations; make sure any filled cells are uppercase
+    # populate data['answerlocations']; make sure any filled cells are uppercase
+    # note that we store item locations by integer not by the dataclass Puzzleitem
+    # because 10 Down is the same location as 10 Across
 
     for row in range(height):
       for col in range(width):
@@ -211,8 +220,7 @@ class Puzzlestate:
             # it's the start of a puzzle item, and we need to grab its number
             data['answerlocations'][thisitemno] = [row,col]
             data['puzzle'][row][col] = Puzzlestate.UNSET
-        elif isinstance(thisitemno,str):
-          data['puzzle'][row][col] = data['puzzle'][row][col].upper()
+        elif isinstance(thisitemno,str): data['puzzle'][row][col] = data['puzzle'][row][col].upper()
         elif isinstance(thisitemno, dict):
           raise RuntimeError("I don't know how to deal with fancy cells yet")
         else:
@@ -221,10 +229,9 @@ class Puzzlestate:
     # now squirrel away the length of the answer for each item,
     # as well as, for each [row,col] all the items that touch that space
 
-    data['items_that_touch_cell'] = [[ set() for i in range(width)]
-                    for j in range(height)]
+    data['items_that_touch_cell'] = [[ list() for i in range(width)]
+                                                      for j in range(height)]
 
-    _items_that_touch_item = dict()
     for direction in data['clues']:
       if direction not in Puzzlegeometry.directions:
         raise RuntimeError(f"{direction} is not a direction")
@@ -238,9 +245,9 @@ class Puzzlestate:
         # in the given direction, to the next BARRIER or boundary
 
         thisitem = Puzzleitem(itemnumber=itemnumber, direction=direction)
-        n = 1
+        n = 0
         while True:
-          data['items_that_touch_cell'][row][col].add(thisitem)
+          data['items_that_touch_cell'][row][col].append( (thisitem, n) )
           row += Puzzlegeometry.directions[direction][0]
           col += Puzzlegeometry.directions[direction][1]
           if (col == width or row == height or
@@ -251,20 +258,11 @@ class Puzzlestate:
         data['answerlengths'][thisitem] = n
         data['incomplete_items'].append(thisitem)
 
-    # now we have, for each cell, a set of items that touch that cell
-    # let's transpose that into, for each item, a set of (other) items that touch
-    # that item
-
-    for row in range(height):
-      for col in range(width):
-        for itema,itemb in list(permutations(data['items_that_touch_cell'][row][col],2)):
-          if itema not in _items_that_touch_item:
-            _items_that_touch_item[itema] = set()
-          _items_that_touch_item[itema].add(itemb)
-
-    # now let's populate items_expanded
+    # now let's start to populate items_expanded
     # sample dict item:
     # '1 Down': { cluetext: 'Launches', length: 5, [ '1 Across', '14 Across', '17 Across', '20 Across']
+    # in the section of code following this one we will add to that inner dict
+    # a list of intersecting clues (and where) 
 
     for d in data['clues']:
       for numberpluscluetext in data['clues'][d]:
@@ -275,8 +273,33 @@ class Puzzlestate:
           'cluetext': cluetext,
           'wordlength': data['answerlengths'][myitem],
           'location': data['answerlocations'][cno],             # [row,col]
-          'intersecting_items': _items_that_touch_item[myitem]
         }
+
+    # we have, for each cell in any item, the 1 or 2 items that touch that cell
+    # let's transpose that into, for each item, a list of tuples 
+    # (charcount,                              counting from 0
+    #  another_item_that_touches_this_item,    Puzzleitem
+    #  charcount_in_other_item)                counting from 0
+
+    for direction in data['clues']:
+      for item in data['clues'][direction]:
+        itemnumber = int(item[0])
+        row,col = data['answerlocations'][itemnumber]
+        thisitem = Puzzleitem(itemnumber=itemnumber, direction=direction)
+        n = 0
+        intersectors = list()
+        while True:
+          if (intersectorlist := data['items_that_touch_cell'][row][col]):
+            for i,n2 in intersectorlist:
+              if i != thisitem:
+                intersectors.append( (n,i,n2) )
+          row += Puzzlegeometry.directions[direction][0]
+          col += Puzzlegeometry.directions[direction][1]
+          if (col == width or row == height or
+              data['puzzle'][row][col] == Puzzlestate.BARRIER):
+            break
+          n += 1
+        data['items_expanded'][thisitem]['intersectors'] = intersectors
 
     return cls(data)
 
