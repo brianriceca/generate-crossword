@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
-generate-crossword.py: fill a crossword puzzle bracket with random words
+gc2.py: fill a crossword puzzle bracket with random words
 
-usage: generate-crossword.py puzzlefile.json
+usage: gc2.py puzzlefile.json
 """
+
+SUCCESS = 1
+FAILURE = 0
+ABORT = -1
 
 import sys
 import logging
@@ -47,91 +51,71 @@ def _mask_coldspots(tryword, coldspots):
     tryword_exploded[loc] = Puzzlestate.COLDSPOT
   return ''.join(tryword_exploded)
 
-def solve(puzzle,recursion_depth):
-  """
-  attempt to find a word that fits into one item in puzzle and then
-  recursively solve the puzzle with that word inserted
-  if we fail, then try a different item instead
-  """
+def completeboard(sofar,thisitemnumber):
+  global puzzle
+  global items
 
-  puzzle2 = None
-  wf = Wordfountain(seed=0)
+  if thisitemnumber == len(items):
+    return SUCCESS # we havin steak tonight
 
-  #puzzle.export_puzzlestate()
+  # OK! If we are N recursions in, that means we are going to try to 
+  # find a word to fill in the N'th item in items.
+  target_item = items[thisitemnumber]
 
-  l = puzzle.incomplete_items()
-  def _wordlength(w):
-    return l[w]['wordlength']
+  logging.info(f'r{thisitemnumber:03} Trying to solve {target_item}')
 
-  itemlist = sorted(l, key=_wordlength)
+  # Let's iterate through how we got here, looking for words already
+  # inscribed that create a constraint for us.
+  constraints = list()
+  intersectors = puzzle.getintersectors(target_item)
+  if intersectors is not None:
+    for histentry in sofar:  #histentries look like ("5 Across","Maple")
+      i,w = histentry
+      if i in intersectors:
+        # uh oh, we have to extract a constraint
+          native_charcount, foreign_charcount = intersectors[i]
+          constraints.append( ( native_charcount, w[foreign_charcount]) )
 
-  for thisitem in itemlist:
-    itemnumber = thisitem.itemnumber
-    direction = thisitem.direction
-    if thisitem is None:
-      # puzzle is solved! no more incomplete items
-      return puzzle
-    assert 'wordlength' in l[thisitem], f'incomplete_items[{thisitem}] lacks wordlength'
-    wordlength = l[thisitem]['wordlength']
-    if 'constraints' in l[thisitem]:
-      constraints = l[thisitem]['constraints']
-    else:
-      constraints = None
+  if len(constraints) > 0:
+    logging.info(f'... r{thisitemnumber:03} with {repr(constraints)}')
 
-    if 'coldspots' in l[thisitem]:
-      coldspots = l[thisitem]['coldspots']
-    else:
-      coldspots = None
+  trywords = wf.matchingwords(puzzle.getlength(target_item), constraints)
+  if len(trywords) == 0:
+    return ABORT
+  for trythis in trywords:
+    # OK, let's recurse with this candidate word! Will it work?!
+    logging.info(f'... r{thisitemnumber:03} letz try {trythis}')
+    sofar.append( (target_item,trythis) )
+    if (retval := completeboard(sofar,thisitemnumber+1)) == SUCCESS:
+      return SUCCESS # yay!
+    elif retval == ABORT:
+      logging.info(f'... r{thisitemnumber:03} whoa guess {trythis} was a dead end')
+      sofar.pop()
+      break
+    # well crap, forget about this word and try again with the next
+    logging.info(f'... r{thisitemnumber:03} bummer, giving up on {trythis}')
+    sofar.pop()
+  # if we make it here, that means all the candidate words were failures
+  logging.info(f'... r{thisitemnumber:03} bigtime bummer, I used up all the words')
+  return FAILURE
 
-    if constraints:
-      logging.info(f'r{recursion_depth:03} Trying to solve {itemnumber} {direction} with {repr(constraints)}')
-    else:
-      logging.info(f'r{recursion_depth:03} Trying to solve {itemnumber} {direction}')
 
-    trywords = wf.matchingwords(wordlength, constraints)
-    if len(trywords) == 0:
-      # Welp, no words in the dictionary fit
-      logging.info(f'{recursion_depth:03} nothing fits {itemnumber} {direction}')
-      continue
 
-    trywords =  [ x for x in trywords if x not in puzzle.getwordsused() ]
-    if len(trywords) == 0:
-      # Welp, no words in the dictionary fit that haven't been tried.
-      logging.info(f'{recursion_depth:03} nothing new fits {itemnumber} {direction}')
 
-      continue
-
-    # now we sort trywords so that words that score higher are earlier!
-
-    trywords.sort(key=lambda x: puzzle.score_word(x, direction, itemnumber),reverse=True)
-
-    explored_words_that_fit = set()
-    for tryword in trywords:
-      tryword_masked = _mask_coldspots(tryword,coldspots)
-      if tryword_masked in explored_words_that_fit:
-        logging.info(f'{recursion_depth:03} no point in pursuing {tryword}')
-        continue
-      explored_words_that_fit.add(tryword_masked)
-      puzzle2 = puzzle.copy().inscribe_word(tryword, direction, itemnumber)
-
-      if puzzle2 is None:
-        raise RuntimeError(f'{recursion_depth:03} tried {tryword} in {itemnumber} {direction}, but it doesnt fit')
-
-      logging.info(f'{recursion_depth:03} {tryword} seems to work in {itemnumber} {direction}!')
-      puzzle3 = solve(puzzle2,recursion_depth+1)
-      if puzzle3 is None:
-        logging.info(f"{recursion_depth:03} the recursive call with {direction} {itemnumber} == {tryword} failed")
-        continue
-      logging.info(f"{recursion_depth:03} the recursive call with {direction} {itemnumber} == {tryword} came back happy!")
-      return puzzle3
-
-  return None
-  
-
+puzzle = dict()
+items = list()
+wf = lambda x: x
 
 def main():
+
   """fill a crossword puzzle bracket with random words"""
-  logging.basicConfig(filename=f'/tmp/generate-crossword-{getpid()}.log',
+
+  global puzzle
+  global items
+  global wf
+
+  wf = Wordfountain(seed=0)
+  logging.basicConfig(filename=f'/tmp/gc2-{getpid()}.log',
                     level=logging.INFO)
   if len(sys.argv) != 2:
     print(f"usage: {sys.argv[0]} puzzlefile.json ")
@@ -140,9 +124,17 @@ def main():
 
   puzzle = Puzzlestate.fromjsonfile(infile)
 
-  puzzle2 = solve(puzzle,0)
-  puzzle2.print()
-  puzzle2.writesvg('solution.svg',showtitle=True,showcluenumbers=True,showsolvedcells=True)
+  sofar = list()
+  items = list(puzzle.data['items_expanded'])
+  bylen = lambda x: puzzle.data['items_expanded'][x]['wordlength']
+  byxings = lambda x: len(puzzle.data['items_expanded'][x]['intersectors'])
+  items.sort(key=byxings,reverse=True)
+
+  if completeboard(sofar,0) == SUCCESS:
+    puzzle.populate_solution_from_changelist(sofar)
+    puzzle.print_solution()
+    puzzle.writesvg('solution.svg',showtitle=True,showcluenumbers=True,showsolvedcells=True)
+
 
 if __name__ == "__main__":
   main()
