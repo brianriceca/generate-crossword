@@ -9,6 +9,7 @@ import os
 import re
 import sqlite3
 import os.path
+import functools
 from typing import List, Tuple
 
 class Wordfountain:
@@ -45,9 +46,8 @@ class Wordfountain:
     cur = self.con.cursor()
 
     matches = cur.execute(query).fetchall()
-    print(f'{query} matches are {matches}')
 
-#   random.shuffle(matches)
+    random.shuffle(matches)
     return matches
 
 # end of class methods

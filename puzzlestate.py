@@ -12,6 +12,7 @@ import logging
 import svgwrite
 from itertools import permutations
 from dataclasses import dataclass
+from typing import Dict
 
 script_folder = os.path.dirname(os.path.realpath(__file__))
 
@@ -33,7 +34,6 @@ def _otherdirection(d):
 class Puzzleitem:
   itemnumber: int
   direction: str
-  length: int = 0
   def fromlist(aslist):
     return Puzzleitem(itemnumber=int(aslist[0]),direction=str(aslist[1]))
   def fromstr(asstr):
@@ -44,8 +44,6 @@ class Puzzleitem:
       raise ValueError(f'{self.direction} is not a valid direction')
     if not isinstance(self.itemnumber,int) or (self.itemnumber < 0):
       raise ValueError(f'{self.itemnumber} is not a valid itemnumber')
-    if not isinstance(self.length,int) or (self.length < 0):
-      raise ValueError(f'{self.length} is not a valid item length')
   def __repr__(self):
     return f'{self.itemnumber} {self.direction}'
 
@@ -255,7 +253,7 @@ class Puzzlestate:
             break
           n += 1
 
-        data['answerlengths'][thisitem] = n
+        data['answerlengths'][thisitem] = n+1
         data['incomplete_items'].append(thisitem)
 
     # now let's start to populate items_expanded
@@ -276,10 +274,12 @@ class Puzzlestate:
         }
 
     # we have, for each cell in any item, the 1 or 2 items that touch that cell
-    # let's transpose that into, for each item, a list of tuples 
-    # (charcount,                              counting from 0
-    #  another_item_that_touches_this_item,    Puzzleitem
-    #  charcount_in_other_item)                counting from 0
+    # let's transpose that into, for each item, a DICT of tuples 
+    # {                             
+    #  another_item_that_touches_this_item:     Puzzleitem
+    #  (charcount_in_this_item,                 counting from 0
+    #   charcount_in_other_item))               counting from 0
+    # }
 
     for direction in data['clues']:
       for item in data['clues'][direction]:
@@ -287,12 +287,12 @@ class Puzzlestate:
         row,col = data['answerlocations'][itemnumber]
         thisitem = Puzzleitem(itemnumber=itemnumber, direction=direction)
         n = 0
-        intersectors = list()
+        intersectors = dict()
         while True:
           if (intersectorlist := data['items_that_touch_cell'][row][col]):
             for i,n2 in intersectorlist:
               if i != thisitem:
-                intersectors.append( (n,i,n2) )
+                intersectors[i] = (n,n2)
           row += Puzzlegeometry.directions[direction][0]
           col += Puzzlegeometry.directions[direction][1]
           if (col == width or row == height or
@@ -444,7 +444,7 @@ class Puzzlestate:
     return self
 
   def writesvg(self,filename,**kwargs):
-    assert 'showcluenumbers' not in kwargs or isinstance(kwargs['showitemnumbers'],bool), \
+    assert 'showcluenumbers' not in kwargs or isinstance(kwargs['showcluenumbers'],bool), \
         'showcluenumbers arg must be True or False'
 
     assert 'showsolvedcells' not in kwargs or isinstance(kwargs['showsolvedcells'],bool), \
@@ -780,28 +780,20 @@ class Puzzlestate:
 
     return score
 
-  def inscribe_word(self,word,direction,itemnumber,be_safe=True):
+  def inscribe_word_in_solution(self,item,word):
     """
     returns object containing the word if it was able to inscribe it,
     else returns none
     """
-
-    if be_safe:
-      if self.test_word(word,direction,itemnumber):
-        pass
-      else:
-        return None
+    direction = item.direction
+    itemnumber = item.itemnumber
 
     row_increment,col_increment = Puzzlegeometry.directions[direction]
 
     row,col = self.data['answerlocations'][itemnumber]
     i = 0
     for c in word:
-      self.setchar(row,col,c)
-      for item in self.data['items_that_touch_cell'][row][col]:
-        if 'constraints' not in self.data['items_expanded'][item]:
-          self.data['items_expanded'][item]['constraints'] = set()
-        self.data['items_expanded'][item]['constraints'].add([i,c])
+      self.data['solution'][row][col] = c
       row += row_increment
       col += col_increment
       i += 1
@@ -852,6 +844,10 @@ class Puzzlestate:
     listify = lambda x: list(x)
     return json.dumps(self.data,default=listify)
 
+  def populate_solution_from_changelist(self,changelist):
+    for c in changelist:
+      self.inscribe_word_in_solution(c[0],c[1])
+      
   def print_solution(self):
     for rowno in range(self.height()):
       for colno in range(self.width()):
@@ -865,6 +861,14 @@ class Puzzlestate:
         else:
           print("¿ ", end='')
       print()
+
+  def getintersectors(self,item) -> Dict:
+    if 'intersectors' not in self.data['items_expanded'][item]:
+      return None
+    return self.data['items_expanded'][item]['intersectors']
+
+  def getlength(self,item) -> int:
+    return self.data['answerlengths'][item]
 
   def sparseness(self):
     size = self.height() * self.width()
