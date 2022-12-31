@@ -62,7 +62,11 @@ sql_ddl = ("INSERT INTO words VALUES (?, ?, " +
 
 cur = con.cursor()
 while True:
-  line = unidecode.unidecode(args.infile.readline().strip().upper())
+  line = unidecode.unidecode(args.infile.readline()).strip
+  if ' ' in line:
+    print(f'skipping {line} because spaces bad')
+    continue
+  line = line.upper())
   if not line:
     break
   print(f'writing {line}')
