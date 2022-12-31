@@ -26,6 +26,7 @@ def main():
 #  sg.theme('DarkGreen')
   layout = [  [sg.Text(f"Draw a {height} x {width} crossword puzzle", key='-TITLE-')],
               [sg.Text('', size=(80,1), key='-FEEDBACK-')],
+              [sg.Text('Puzzle title:'), sg.InputText(outfilename,key='-INPUTTEXT-')],
               [ [sg.Button(image_data=base64_white_png, key=f'-{rowno},{colno}-', metadata=False) for colno in range(width) ] for rowno in range(height) ],
 
               [sg.Button('Save'),sg.Button('Quit')] ]
@@ -39,7 +40,8 @@ def main():
       event == 'Quit' or event.startswith('q')):
       sys.exit(0)
     if event == 'Save':
-      puzzle.insert_clue_numbers().writejson(outfilename)
+      puzzle.settitle(values['-INPUTTEXT-'])
+      puzzle.insert_item_numbers().writejson(outfilename)
     if bool(re.search(r'^-\d+,\d+-$',cell_row_col := event)):
       youhit = [int(x) for x in re.split(r'[-,]', cell_row_col) if x]
       print(f'You hit row {youhit[0]} column {youhit[1]}')
