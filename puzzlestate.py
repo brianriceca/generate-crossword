@@ -83,7 +83,7 @@ class Puzzlestate:
     self.data = data
 
   @classmethod
-  def blank(cls,height,width):
+  def blank(cls,height:int,width:int, title='Untitled'):
     if int(width) <= 0 or int(height) <= 0:
       return None
     return cls( {"dimensions": {"height": int(height),
@@ -233,8 +233,8 @@ class Puzzlestate:
     for direction in data['clues']:
       if direction not in Puzzlegeometry.directions:
         raise RuntimeError(f"{direction} is not a direction")
-      for item in data['clues'][direction]:
-        itemnumber = int(item[0])
+      for numberpluscluetext in data['clues'][direction]:
+        itemnumber = int(numberpluscluetext[0])
         row,col = data['answerlocations'][itemnumber]
         assert data['puzzle'][row][col] == Puzzlestate.UNSET, \
           f"at ({row},{col}): expected {Puzzlestate.UNSET}, saw {data['puzzle'][row][col]}"
@@ -258,9 +258,11 @@ class Puzzlestate:
 
     # now let's start to populate items_expanded
     # sample dict item:
-    # '1 Down': { cluetext: 'Launches', length: 5, [ '1 Across', '14 Across', '17 Across', '20 Across']
-    # in the section of code following this one we will add to that inner dict
-    # a list of intersecting clues (and where) 
+    # '1 Down': 
+    #  { cluetext: 'Launches', 
+    #    wordlength: 5, 
+    #    location: [row,col]
+    #  }
 
     for d in data['clues']:
       for numberpluscluetext in data['clues'][d]:
@@ -277,13 +279,13 @@ class Puzzlestate:
     # let's transpose that into, for each item, a DICT of tuples 
     # {                             
     #  another_item_that_touches_this_item:     Puzzleitem
-    #  (charcount_in_this_item,                 counting from 0
-    #   charcount_in_other_item))               counting from 0
+    #     (charcount_in_this_item,              counting from 0
+    #      charcount_in_other_item))            counting from 0
     # }
 
     for direction in data['clues']:
-      for item in data['clues'][direction]:
-        itemnumber = int(item[0])
+      for itempluscluetext in data['clues'][direction]:
+        itemnumber = int(itempluscluetext[0])
         row,col = data['answerlocations'][itemnumber]
         thisitem = Puzzleitem(itemnumber=itemnumber, direction=direction)
         n = 0
@@ -690,7 +692,7 @@ class Puzzlestate:
       return None
 
   def addwordused(self,word):
-    self.data["wordsused"].add(word)
+    self.data["wordsused"].append(word)
     return self
 
   def copy(self):
