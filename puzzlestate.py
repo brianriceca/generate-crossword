@@ -886,15 +886,15 @@ class Puzzlestate:
 
 
   def upsert_item_text(self,itemnumber,direction,text=''):
-    if direction not in Puzzlestate.directions:
+    if direction not in Puzzlegeometry.directions:
       raise RuntimeError(f"{direction} is not a direction")
     if len(text) == 0:
       text = 'Lorem ipsum'
-    if 'items' not in self.data:
-      self.data['items'] = dict()
-    if direction not in self.data['items']:
-      self.data['items'][direction] = list()
-    self.data['items'][direction].append([itemnumber,text])
+    if 'clues' not in self.data:
+      self.data['clues'] = dict()
+    if direction not in self.data['clues']:
+      self.data['clues'][direction] = list()
+    self.data['clues'][direction].append([itemnumber,text])
 
 
   def insert_item_numbers(self):
