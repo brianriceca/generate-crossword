@@ -20,12 +20,13 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-o', '--output')
 parser.add_argument('-f', '--force', action='store_true')
+parser.add_argument('-d', '--db')
 parser.add_argument('infile',type=argparse.FileType('r', encoding='latin-1'))
 
 args = parser.parse_args()
 infilename = args.infile.name
 outfilename = args.output
-print(vars(args))
+worddb = args.db
 
 assert infilename is not None
 
@@ -72,9 +73,12 @@ def completeboard(sofar,thisitemnumber):
     for histentry in sofar:  #histentries look like ("5 Across","Maple")
       i,w = histentry
       if i in intersectors:
-        # uh oh, we have to extract a constraint
+        # uh oh, we might have to extract a constraint
           native_charcount, foreign_charcount = intersectors[i]
-          constraints.append( ( native_charcount, w[foreign_charcount]) )
+          if isinstance(w[foreign_charcount],str):
+            assert w[foreign_charcount] != Puzzlestate.BARRIER
+            if w[foreign_charcount] != Puzzlestate.UNSET:
+              constraints.append( ( native_charcount, w[foreign_charcount]) )
 
   if len(constraints) > 0:
     logging.info(f'... r{thisitemnumber:03} with {repr(constraints)}')
@@ -114,15 +118,11 @@ def main():
   global items
   global wf
 
-  wf = Wordfountain(seed=0)
+  wf = Wordfountain(worddb=worddb,seed=0)
   logging.basicConfig(filename=f'/tmp/gc2-{getpid()}.log',
                     level=logging.INFO)
-  if len(sys.argv) != 2:
-    print(f"usage: {sys.argv[0]} puzzlefile.json ")
-    sys.exit(1)
-  infile = sys.argv[1]
 
-  puzzle = Puzzlestate.fromjsonfile(infile)
+  puzzle = Puzzlestate.fromjsonfile(infilename)
 
   sofar = list()
   items = list(puzzle.data['items_expanded'])
