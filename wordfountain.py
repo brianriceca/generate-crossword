@@ -25,8 +25,10 @@ class Wordfountain:
         config = json.load(f)
       worddb = config['worddb']
     
-    if not os.path.isabs(worddb):
-      worddb = os.path.join(home,'.crossword', worddb)
+#    if not os.path.isabs(worddb):
+#      home = os.path.expanduser('~')
+#      assert os.path.isdir(home), "you lack a homedir"
+#      worddb = os.path.join(home,'.crossword', worddb)
 
     if seed == 0:
       random.seed(int(time.time()))
