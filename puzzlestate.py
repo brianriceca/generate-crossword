@@ -468,7 +468,7 @@ class Puzzlestate:
 
     title = self.gettitle()
     if title is None or title == '':
-      title = 'Untitled Crossword Puzzle'
+      title = 'Untitled'
 
     if 'title' in kwargs:
       if isinstance(kwargs['title'], str):
@@ -798,12 +798,12 @@ class Puzzlestate:
     row_increment,col_increment = Puzzlegeometry.directions[direction]
 
     row,col = self.data['answerlocations'][itemnumber]
-    i = 0
+
     for c in word:
       self.data['solution'][row][col] = c
       row += row_increment
       col += col_increment
-      i += 1
+
 
     logging.info(f"inscribed {word} into {itemnumber} {direction}")
 

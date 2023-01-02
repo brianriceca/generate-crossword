@@ -64,18 +64,18 @@ def _mask_coldspots(tryword, coldspots):
     tryword_exploded[loc] = Puzzlestate.COLDSPOT
   return ''.join(tryword_exploded)
 
-def completeboard(sofar,thisitemnumber):
+def completeboard(sofar,recursiondepth):
   global puzzle
   global items
 
-  if thisitemnumber == len(items):
+  if recursiondepth == len(items):
     return SUCCESS # we havin steak tonight
 
   # OK! If we are N recursions in, that means we are going to try to 
   # find a word to fill in the N'th item in items.
-  target_item = items[thisitemnumber]
+  target_item = items[recursiondepth]
 
-  logging.info(f'r{thisitemnumber:03} Trying to solve {target_item}')
+  logging.info(f'r{recursiondepth:03} Trying to solve {target_item}')
 
   # Let's iterate through how we got here, looking for words already
   # inscribed that create a constraint for us.
@@ -93,26 +93,57 @@ def completeboard(sofar,thisitemnumber):
               constraints.append( ( native_charcount, w[foreign_charcount]) )
 
   if len(constraints) > 0:
-    logging.info(f'... r{thisitemnumber:03} with {repr(constraints)}')
+    logging.info(f'... r{recursiondepth:03} with {repr(constraints)}')
+
+  # 'intersectors' values look like this:
+  # {1 Down: (0, 1), 2 Down: (1, 1), 3 Down: (2, 1), 4 Down: (3, 1), 5 Down: (4, 1)}
+  intersection_locs = None
+  if intersections is not None:
+    intersection_locs = [ intersections[k][0] for k in intersections ]
+  intersection_locs = set(intersection_locs)
+
+  # constraints values look like this:
+  # [(0, 'R'), (1, 'S'), (2, 'R'), (3, 'R'), (4, 'S')]
+  constraint_locs = None
+  if constraints is not None:
+    constraint_locs = [ i[0] for i in constraints ]
+  constraint_locs = set(constraint_locs)
+    
+  vec = list()
+  for i,c in enumerate(word):
+    if i in constraint_locs:
+      vec.append(0)
+    if i in intersection_locs:
+      vec.append(Puzzlestate.singleletterfreqs[c.upper()] * INTERSECTION_WEIGHT)
+    else:
+      vec.append(Puzzlestate.singleletterfreqs[c.upper()] * NONINTERSECTION_WEIGHT)
+    
+    def _ratewordcandidate(w):
+      score = 0
+      for i,c = enumerate(w):
+        score += vec()
+# ZZ     
+    return score
 
   trywords = wf.matchingwords(puzzle.getlength(target_item), constraints)
   if len(trywords) == 0:
     return ABORT
+  trywords.sort(key=_ratewordcandidate)
   for trythis in trywords:
     # OK, let's recurse with this candidate word! Will it work?!
-    logging.info(f'... r{thisitemnumber:03} letz try {trythis}')
+    logging.info(f'... r{recursiondepth:03} letz try {trythis}')
     sofar.append( (target_item,trythis) )
-    if (retval := completeboard(sofar,thisitemnumber+1)) == SUCCESS:
+    if (retval := completeboard(sofar,recursiondepth+1)) == SUCCESS:
       return SUCCESS # yay!
     elif retval == ABORT:
-      logging.info(f'... r{thisitemnumber:03} whoa guess {trythis} was a dead end')
+      logging.info(f'... r{recursiondepth:03} whoa guess {trythis} was a dead end')
       sofar.pop()
       break
     # well crap, forget about this word and try again with the next
-    logging.info(f'... r{thisitemnumber:03} bummer, giving up on {trythis}')
+    logging.info(f'... r{recursiondepth:03} bummer, giving up on {trythis}')
     sofar.pop()
   # if we make it here, that means all the candidate words were failures
-  logging.info(f'... r{thisitemnumber:03} bigtime bummer, I used up all the words')
+  logging.info(f'... r{recursiondepth:03} bigtime bummer, I used up all the words')
   return FAILURE
 
 
@@ -144,6 +175,8 @@ def main():
 
   if completeboard(sofar,0) == SUCCESS:
     puzzle.populate_solution_from_changelist(sofar)
+    puzzle.writejson(outfilename)
+    print('Just saved to json')
     puzzle.print_solution()
     puzzle.writesvg('solution.svg',showtitle=True,showcluenumbers=True,showsolvedcells=True)
 
