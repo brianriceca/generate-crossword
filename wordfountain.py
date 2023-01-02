@@ -12,6 +12,15 @@ import os.path
 import functools
 from typing import List, Tuple
 
+confdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"conf")))
+if not os.path.exists(confdir):
+  raise RuntimeError(f'no conf directory at {confdir}')
+if not os.path.isdir(confdir):
+  raise RuntimeError(f'{confdir} is supposed to be a directory')
+conffile = os.path.join(conffile,"crossword.json")
+if not os.path.exists(s.path.join(confdir,conffile)):
+  raise RuntimeError(f'missing config file')
+
 class Wordfountain:
   def __init__(self,worddb=None,seed=0):
     assert worddb is None or isinstance(worddb, str), \

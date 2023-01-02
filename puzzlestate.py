@@ -14,7 +14,15 @@ from itertools import permutations
 from dataclasses import dataclass
 from typing import Dict
 
-script_folder = os.path.dirname(os.path.realpath(__file__))
+confdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"conf")))
+if not os.path.exists(confdir):
+  raise RuntimeError(f'no conf directory at {confdir}')
+if not os.path.isdir(confdir):
+  raise RuntimeError(f'{confdir} is supposed to be a directory')
+conffile = os.path.join(conffile,"crossword.json")
+if not os.path.exists(s.path.join(confdir,conffile)):
+  raise RuntimeError(f'missing config file')
+
 
 class Puzzlegeometry:
   # Directions are defined as [rowincrement,colincrement]

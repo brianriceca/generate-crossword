@@ -28,6 +28,18 @@ infilename = args.infile.name
 outfilename = args.output
 worddb = args.db
 
+confdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"conf")))
+if not os.path.exists(confdir):
+  raise RuntimeError(f'no conf directory at {confdir}')
+if not os.path.isdir(confdir):
+  raise RuntimeError(f'{confdir} is supposed to be a directory')
+conffile = os.path.join(conffile,"crossword.json")
+if not os.path.exists(s.path.join(confdir,conffile)):
+  raise RuntimeError(f'missing config file')
+
+
+
+
 assert infilename is not None
 
 if not os.path.exists(infilename):
