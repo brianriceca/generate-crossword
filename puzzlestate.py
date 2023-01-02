@@ -19,8 +19,8 @@ if not os.path.exists(confdir):
   raise RuntimeError(f'no conf directory at {confdir}')
 if not os.path.isdir(confdir):
   raise RuntimeError(f'{confdir} is supposed to be a directory')
-conffile = os.path.join(conffile,"crossword.json")
-if not os.path.exists(s.path.join(confdir,conffile)):
+conffile = os.path.join(confdir,"crossword.json")
+if not os.path.exists(conffile):
   raise RuntimeError(f'missing config file')
 
 
@@ -63,8 +63,7 @@ class Puzzlestate:
   BARRIER = '#'
   COLDSPOT = '~'
 
-  with open(os.path.join(os.path.expanduser('~'), 
-                         '.crossword/crossword.conf'),'r') as f:
+  with open(conffile,'r') as f:
     config = json.load(f)
   worddb = config['worddb']
 
@@ -72,9 +71,7 @@ class Puzzlestate:
     result = dict()
     try:
       if not os.path.isabs(fn):
-        fn = os.path.join(os.path.expanduser('~'),
-                         '.crossword',
-                         fn)
+        fn = os.path.join(confdir,fn)
       with open(fn,encoding='utf-8') as f:
         result = json.load(f)
     except OSError:
