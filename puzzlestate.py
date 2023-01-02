@@ -14,7 +14,7 @@ from itertools import permutations
 from dataclasses import dataclass
 from typing import Dict
 
-confdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"conf")))
+confdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"conf")
 if not os.path.exists(confdir):
   raise RuntimeError(f'no conf directory at {confdir}')
 if not os.path.isdir(confdir):

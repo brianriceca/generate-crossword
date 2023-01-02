@@ -28,7 +28,7 @@ infilename = args.infile.name
 outfilename = args.output
 worddb = args.db
 
-confdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"conf")))
+confdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"conf")
 if not os.path.exists(confdir):
   raise RuntimeError(f'no conf directory at {confdir}')
 if not os.path.isdir(confdir):
