@@ -17,8 +17,8 @@ if not os.path.exists(confdir):
   raise RuntimeError(f'no conf directory at {confdir}')
 if not os.path.isdir(confdir):
   raise RuntimeError(f'{confdir} is supposed to be a directory')
-conffile = os.path.join(conffile,"crossword.json")
-if not os.path.exists(s.path.join(confdir,conffile)):
+conffile = os.path.join(confdir,"crossword.json")
+if not os.path.exists(os.path.join(confdir,conffile)):
   raise RuntimeError(f'missing config file')
 
 class Wordfountain:

@@ -67,7 +67,7 @@ class Puzzlestate:
     config = json.load(f)
   worddb = config['worddb']
 
-  def _slurpjson(fn: str):
+  def slurpjson(fn: str):
     result = dict()
     try:
       if not os.path.isabs(fn):
@@ -78,11 +78,11 @@ class Puzzlestate:
       raise RuntimeError(f'Could not read json from {fn}')
     return result
 
-  i_like_vowels = _slurpjson('vowel_friendly_weightings.json')
-  i_like_cons = _slurpjson('consonant_friendly_weightings.json')
-  i_like_finals = _slurpjson('final_friendly_weightings.json')
-  letterpairfreqs = _slurpjson('letter_pair_freqs.json')
-  singleletterfreqs = _slurpjson('single_letter_weightings.json')
+  i_like_vowels = slurpjson('vowel_friendly_weightings.json')
+  i_like_cons = slurpjson('consonant_friendly_weightings.json')
+  i_like_finals = slurpjson('final_friendly_weightings.json')
+  letterpairfreqs = slurpjson('letter_pair_freqs.json')
+  singleletterfreqs = slurpjson('single_letter_weightings.json')
 
   def __init__(self,data):
     self.data = data

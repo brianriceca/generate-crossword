@@ -36,8 +36,15 @@ if not os.path.isdir(confdir):
 conffile = os.path.join(conffile,"crossword.json")
 if not os.path.exists(s.path.join(confdir,conffile)):
   raise RuntimeError(f'missing config file')
+config = json.load(f)
 
-
+singleletterfreqs = slurpjson(os.path.join(confdir,'single_letter_weightings.json'))
+if worddb is None or worddb == '':
+  worddb = config.worddb
+assert isinstance(singleletterfreqs,dict), 'singleletterfreqs needs to be a dict'
+nonintersection_weights = { k:config.nonintersection_weight_factor * singleletterfreqs[k] for k in singleletterfreqs }
+intersection_weights = { k:config.intersection_weight_factor * singleletterfreqs[k] for k in singleletterfreqs }
+constraint_weights = { k:config.constraight_weight_factor * singleletterfreqs[k] for k in singleletterfreqs }
 
 
 assert infilename is not None
@@ -107,22 +114,21 @@ def completeboard(sofar,recursiondepth):
   constraint_locs = None
   if constraints is not None:
     constraint_locs = [ i[0] for i in constraints ]
-  constraint_locs = set(constraint_locs)
+  constraint_locs = list(set(constraint_locs)).sort()
     
-  vec = list()
+  list_of_dicts = list()
   for i,c in enumerate(word):
     if i in constraint_locs:
-      vec.append(0)
+      list_of_dicts.append(constraint_weights)
     if i in intersection_locs:
-      vec.append(Puzzlestate.singleletterfreqs[c.upper()] * INTERSECTION_WEIGHT)
+      list_of_dicts.append(intersection_weights)
     else:
-      vec.append(Puzzlestate.singleletterfreqs[c.upper()] * NONINTERSECTION_WEIGHT)
+      list_of_dicts.append(nonintersection_weights)
     
     def _ratewordcandidate(w):
       score = 0
-      for i,c = enumerate(w):
-        score += vec()
-# ZZ     
+      for i,c in enumerate(w):
+        score += vec[i][c]
     return score
 
   trywords = wf.matchingwords(puzzle.getlength(target_item), constraints)

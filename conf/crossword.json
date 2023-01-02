@@ -1,5 +1,8 @@
 {
   "worddb": "/Users/brice/Documents/bigworddb.db",
+  "constraint_weight_factor": 0,
+  "intersection_weight_factor": 3,
+  "nonintersection_weight_factor": 1,
   "cellsize_mm": 12,
   "title_height_mm": 14,
   "offset_cluenum_x": 1,
