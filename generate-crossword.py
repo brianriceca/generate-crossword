@@ -16,6 +16,7 @@ from wordfountain import Wordfountain
 from puzzlestate import Puzzlestate, Puzzleitem
 import os.path
 import argparse
+import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-o', '--output')
@@ -33,18 +34,20 @@ if not os.path.exists(confdir):
   raise RuntimeError(f'no conf directory at {confdir}')
 if not os.path.isdir(confdir):
   raise RuntimeError(f'{confdir} is supposed to be a directory')
-conffile = os.path.join(conffile,"crossword.json")
-if not os.path.exists(s.path.join(confdir,conffile)):
+conffile = os.path.join(confdir,"crossword.json")
+if not os.path.exists(conffile):
   raise RuntimeError(f'missing config file')
-config = json.load(f)
+with open(conffile,"r") as f:
+  config = json.load(f)
+with open(os.path.join(confdir,'single_letter_weightings.json')) as f:
+  singleletterfreqs = json.load(f)
 
-singleletterfreqs = slurpjson(os.path.join(confdir,'single_letter_weightings.json'))
 if worddb is None or worddb == '':
-  worddb = config.worddb
+  worddb = config['worddb']
 assert isinstance(singleletterfreqs,dict), 'singleletterfreqs needs to be a dict'
-nonintersection_weights = { k:config.nonintersection_weight_factor * singleletterfreqs[k] for k in singleletterfreqs }
-intersection_weights = { k:config.intersection_weight_factor * singleletterfreqs[k] for k in singleletterfreqs }
-constraint_weights = { k:config.constraight_weight_factor * singleletterfreqs[k] for k in singleletterfreqs }
+nonintersection_weights = { k:config['nonintersection_weight_factor'] * singleletterfreqs[k] for k in singleletterfreqs }
+intersection_weights = { k:config['intersection_weight_factor'] * singleletterfreqs[k] for k in singleletterfreqs }
+constraint_weights = { k:config['constraint_weight_factor'] * singleletterfreqs[k] for k in singleletterfreqs }
 
 
 assert infilename is not None
