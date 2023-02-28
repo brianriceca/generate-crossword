@@ -108,8 +108,8 @@ def completeboard(sofar,recursiondepth):
   # 'intersectors' values look like this:
   # {1 Down: (0, 1), 2 Down: (1, 1), 3 Down: (2, 1), 4 Down: (3, 1), 5 Down: (4, 1)}
   intersection_locs = None
-  if intersections is not None:
-    intersection_locs = [ intersections[k][0] for k in intersections ]
+  if intersectors is not None:
+    intersection_locs = [ intersectors[k][0] for k in intersectors ]
   intersection_locs = set(intersection_locs)
 
   # constraints values look like this:
@@ -120,18 +120,19 @@ def completeboard(sofar,recursiondepth):
   constraint_locs = list(set(constraint_locs)).sort()
     
   list_of_dicts = list()
-  for i,c in enumerate(word):
-    if i in constraint_locs:
+  for i in range(puzzle.answerlength(target_item)):
+    if constraint_locs and i in constraint_locs:
       list_of_dicts.append(constraint_weights)
-    if i in intersection_locs:
+    elif intersection_locs and i in intersection_locs:
       list_of_dicts.append(intersection_weights)
     else:
       list_of_dicts.append(nonintersection_weights)
     
-    def _ratewordcandidate(w):
-      score = 0
-      for i,c in enumerate(w):
-        score += vec[i][c]
+  assert len(list_of_dicts) == puzzle.answerlength(target_item), "yer logic is faulty"
+  def _ratewordcandidate(w):
+    score = 0
+    for i,c in enumerate(w):
+      score += list_of_dicts[i][c]
     return score
 
   trywords = wf.matchingwords(puzzle.getlength(target_item), constraints)

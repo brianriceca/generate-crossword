@@ -605,7 +605,7 @@ class Puzzlestate:
 
     drawing.save()
 
-  def answerlength(item):
+  def answerlength(self,item):
     return self.data['answerlengths'][item]
 
   def intersecting_items(self, itemnumber, direction):
