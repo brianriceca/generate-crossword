@@ -12,27 +12,12 @@ import os.path
 import functools
 from typing import List, Tuple
 
-confdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"conf")
-if not os.path.exists(confdir):
-  raise RuntimeError(f'no conf directory at {confdir}')
-if not os.path.isdir(confdir):
-  raise RuntimeError(f'{confdir} is supposed to be a directory')
-conffile = os.path.join(confdir,"crossword.json")
-if not os.path.exists(os.path.join(confdir,conffile)):
-  raise RuntimeError(f'missing config file')
-
 class Wordfountain:
   def __init__(self,worddb=None,seed=0):
     assert worddb is None or isinstance(worddb, str), \
       "wordfountain db filename must be a string"
     if worddb is None or worddb == '':
-      home = os.path.expanduser('~')
-      assert os.path.isdir(home), "you lack a homedir"
-      confdir = os.path.join(home,'.crossword')
-    
-      with open(os.path.join(confdir, 'crossword.conf'),'r') as f:
-        config = json.load(f)
-      worddb = config['worddb']
+      worddb = os.environ.get('CROSSWORD_WORDDB')
     
 #    if not os.path.isabs(worddb):
 #      home = os.path.expanduser('~')
@@ -44,7 +29,7 @@ class Wordfountain:
     else:
       random.seed(seed)
 
-    self.con = sqlite3.connect('file:' + worddb + '?mode=ro', uri=True)
+    self.con = sqlite3.connect('file://' + worddb + '?mode=ro', uri=True)
     self.con.row_factory = lambda cursor, row: row[0]
 
   def matchingwords(self, desired_length: int, constraints: List[Tuple]) -> List:
