@@ -37,13 +37,9 @@ if outfilename is None:
     outfilename = (infilename[::-1].replace('txt.','bd.',1))[::-1]
 
 
-print(f'new outfilename is {outfilename}')
-
 if os.path.exists(outfilename) and not args.force:
   print(f'output file {outfilename} exists (-f to clobber)')
   sys.exit(1)
-  
-print('bye')
 
 con = sqlite3.connect(outfilename)
 con.execute('''CREATE TABLE words
@@ -62,11 +58,11 @@ sql_ddl = ("INSERT INTO words VALUES (?, ?, " +
 
 cur = con.cursor()
 while True:
-  line = unidecode.unidecode(args.infile.readline()).strip
+  line = unidecode.unidecode(args.infile.readline()).strip()
   if ' ' in line:
     print(f'skipping {line} because spaces bad')
     continue
-  line = line.upper())
+  line = line.upper()
   if not line:
     break
   print(f'writing {line}')
