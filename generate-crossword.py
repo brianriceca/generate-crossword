@@ -42,8 +42,6 @@ with open(conffile,"r") as f:
 with open(os.path.join(confdir,'single_letter_weightings.json')) as f:
   singleletterfreqs = json.load(f)
 
-if worddb is None or worddb == '':
-  worddb = config['worddb']
 assert isinstance(singleletterfreqs,dict), 'singleletterfreqs needs to be a dict'
 nonintersection_weights = { k:config['nonintersection_weight_factor'] * singleletterfreqs[k] for k in singleletterfreqs }
 intersection_weights = { k:config['intersection_weight_factor'] * singleletterfreqs[k] for k in singleletterfreqs }
@@ -129,16 +127,20 @@ def completeboard(sofar,recursiondepth):
       list_of_dicts.append(nonintersection_weights)
     
   assert len(list_of_dicts) == puzzle.answerlength(target_item), "yer logic is faulty"
-  def _ratewordcandidate(w):
-    score = 0
-    for i,c in enumerate(w):
-      score += list_of_dicts[i][c]
-    return score
+  def _ratewordcandidate_lambda(vec):
+    def _rater(w):
+      score = 0
+      for i,c in enumerate(w):
+        score += vec[i][c]
+      return score
+    return _rater
+  
+  _ratewordcandidate = _ratewordcandidate_lambda(list_of_dicts)
 
   trywords = wf.matchingwords(puzzle.getlength(target_item), constraints)
   if len(trywords) == 0:
     return ABORT
-  trywords.sort(key=_ratewordcandidate)
+  trywords.sort(key=_ratewordcandidate,reverse=True)
   for trythis in trywords:
     # OK, let's recurse with this candidate word! Will it work?!
     logging.info(f'... r{recursiondepth:03} letz try {trythis}')

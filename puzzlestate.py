@@ -65,7 +65,6 @@ class Puzzlestate:
 
   with open(conffile,'r') as f:
     config = json.load(f)
-  worddb = config['worddb']
 
   def slurpjson(fn: str):
     result = dict()
@@ -697,7 +696,7 @@ class Puzzlestate:
       return None
 
   def addwordused(self,word):
-    self.data["wordsused"].append(word)
+    self.data["wordsused"].add(word)
     return self
 
   def copy(self):
