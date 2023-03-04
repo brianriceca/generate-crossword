@@ -14,16 +14,6 @@ from itertools import permutations
 from dataclasses import dataclass
 from typing import Dict
 
-confdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"conf")
-if not os.path.exists(confdir):
-  raise RuntimeError(f'no conf directory at {confdir}')
-if not os.path.isdir(confdir):
-  raise RuntimeError(f'{confdir} is supposed to be a directory')
-conffile = os.path.join(confdir,"crossword.json")
-if not os.path.exists(conffile):
-  raise RuntimeError(f'missing config file')
-
-
 class Puzzlegeometry:
   # Directions are defined as [rowincrement,colincrement]
   directions = {
@@ -63,25 +53,33 @@ class Puzzlestate:
   BARRIER = '#'
   COLDSPOT = '~'
 
-  with open(conffile,'r') as f:
-    config = json.load(f)
+  I_LIKE_VOWELS =       [ 180,   0,   0,   0, 180, 
+                            0,   0,   0, 180,   0, 
+                            0,   0,   0,   0, 180, 
+                            0,   0,   0,   0,   0, 
+                          180,   0,   0,   0,  30, 
+                            0 ]
 
-  def slurpjson(fn: str):
-    result = dict()
-    try:
-      if not os.path.isabs(fn):
-        fn = os.path.join(confdir,fn)
-      with open(fn,encoding='utf-8') as f:
-        result = json.load(f)
-    except OSError:
-      raise RuntimeError(f'Could not read json from {fn}')
-    return result
+  I_LIKE_CONSONANTS =   [   0, 100, 100, 150,   0, 
+                          100, 100, 100,   0, 100, 
+                          100, 130, 100, 160,   0, 
+                          100,  30, 160, 160, 180, 
+                            0,  70, 100,  30,  30, 
+                           40 ]
 
-  i_like_vowels = slurpjson('vowel_friendly_weightings.json')
-  i_like_cons = slurpjson('consonant_friendly_weightings.json')
-  i_like_finals = slurpjson('final_friendly_weightings.json')
-  letterpairfreqs = slurpjson('letter_pair_freqs.json')
-  singleletterfreqs = slurpjson('single_letter_weightings.json')
+  I_LIKE_FINALS =       [  14,   0,   6,  67,  61, 
+                            0,  60,   7,   3,   0, 
+                            3,  16,   7,  36,   5, 
+                            3,   0,  34, 180,  36, 
+                            0,   0,   0,   0,  80, 
+                            0 ]
+
+  SINGLE_LETTER_FREQS = [ 127,  20,  55,  73, 180, 
+                           46,  29,  91, 118,   2, 
+                           11,  64,  46, 118, 127,
+                           20,   2,  91, 109, 135,
+                           55,  20,  37,   2,  37, 
+                           2 ]
 
   def __init__(self,data):
     self.data = data
