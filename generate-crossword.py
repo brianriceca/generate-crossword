@@ -29,25 +29,6 @@ infilename = args.infile.name
 outfilename = args.output
 worddb = args.db
 
-confdir = os.path.join(os.path.dirname(os.path.realpath(__file__)),"conf")
-if not os.path.exists(confdir):
-  raise RuntimeError(f'no conf directory at {confdir}')
-if not os.path.isdir(confdir):
-  raise RuntimeError(f'{confdir} is supposed to be a directory')
-conffile = os.path.join(confdir,"crossword.json")
-if not os.path.exists(conffile):
-  raise RuntimeError(f'missing config file')
-with open(conffile,"r") as f:
-  config = json.load(f)
-with open(os.path.join(confdir,'single_letter_weightings.json')) as f:
-  singleletterfreqs = json.load(f)
-
-assert isinstance(singleletterfreqs,dict), 'singleletterfreqs needs to be a dict'
-nonintersection_weights = { k:config['nonintersection_weight_factor'] * singleletterfreqs[k] for k in singleletterfreqs }
-intersection_weights = { k:config['intersection_weight_factor'] * singleletterfreqs[k] for k in singleletterfreqs }
-constraint_weights = { k:config['constraint_weight_factor'] * singleletterfreqs[k] for k in singleletterfreqs }
-
-
 assert infilename is not None
 
 if not os.path.exists(infilename):
@@ -72,7 +53,7 @@ def _mask_coldspots(tryword, coldspots):
     tryword_exploded[loc] = Puzzlestate.COLDSPOT
   return ''.join(tryword_exploded)
 
-def completeboard(sofar,recursiondepth):
+def completeboard(sofar,recursiondepth,sparse=False):
   global puzzle
   global items
 
@@ -82,6 +63,7 @@ def completeboard(sofar,recursiondepth):
   # OK! If we are N recursions in, that means we are going to try to 
   # find a word to fill in the N'th item in items.
   target_item = items[recursiondepth]
+  row,col = puzzle.answerlocation(target_item.itemnumber)
 
   logging.info(f'r{recursiondepth:03} Trying to solve {target_item}')
 
@@ -118,14 +100,27 @@ def completeboard(sofar,recursiondepth):
   constraint_locs = list(set(constraint_locs)).sort()
     
   list_of_dicts = list()
-  for i in range(puzzle.answerlength(target_item)):
-    if constraint_locs and i in constraint_locs:
-      list_of_dicts.append(constraint_weights)
-    elif intersection_locs and i in intersection_locs:
-      list_of_dicts.append(intersection_weights)
+
+  if sparse:
+    for i in range(puzzle.answerlength(target_item)):
+      if constraint_locs and i in constraint_locs:
+        list_of_dicts.append( [ 0 for a in range(26) ])
+      elif intersection_locs and i in intersection_locs:
+        list_of_dicts.append(Puzzlestate.PREFER_COMMON_LETTERS)
+      else:
+        list_of_dicts.append(Puzzlestate.SINGLE_LETTER_FREQS)
+  else:
+    if _checkerboard(row,col):
+      prefer_a_vowel = True
     else:
-      list_of_dicts.append(nonintersection_weights)
-    
+      prefer_a_vowel = False
+      for i in range(puzzle.answerlength(target_item)):
+        if prefer_a_vowel:
+          list_of_dicts.append(I_LIKE_VOWELS)
+        else:
+          list_of_dicts.append(I_LIKE_CONSONANTS)
+        prefer_a_vowel = not prefer_a_vowel
+
   assert len(list_of_dicts) == puzzle.answerlength(target_item), "yer logic is faulty"
   def _ratewordcandidate_lambda(vec):
     def _rater(w):
@@ -158,9 +153,6 @@ def completeboard(sofar,recursiondepth):
   logging.info(f'... r{recursiondepth:03} bigtime bummer, I used up all the words')
   return FAILURE
 
-
-
-
 puzzle = dict()
 items = list()
 wf = lambda x: x
@@ -179,13 +171,14 @@ def main():
 
   puzzle = Puzzlestate.fromjsonfile(infilename)
 
+  sparseness = puzzle.sparseness()
   sofar = list()
   items = list(puzzle.data['items_expanded'])
   bylen = lambda x: puzzle.data['items_expanded'][x]['wordlength']
   byxings = lambda x: len(puzzle.data['items_expanded'][x]['intersectors'])
   items.sort(key=byxings,reverse=True)
 
-  if completeboard(sofar,0) == SUCCESS:
+  if completeboard(sofar,0,sparse=(sparseness < 0.6)) == SUCCESS:
     puzzle.populate_solution_from_changelist(sofar)
     puzzle.writejson(outfilename)
     print('Just saved to json')

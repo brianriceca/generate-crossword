@@ -80,6 +80,13 @@ class Puzzlestate:
                            20,   2,  91, 109, 135,
                            55,  20,  37,   2,  37, 
                            2 ]
+  
+  PREFER_COMMON_LETTERS =  [  89,   2,  16,  29, 180, 
+                           11,   4,  46,  77,   1, 
+                           1,   22,  11,  77,  89, 
+                           2,    0,  46,  66, 101, 
+                           16,   2,   7,   1,   7, 
+                           0 ]
 
   def __init__(self,data):
     self.data = data
@@ -702,6 +709,9 @@ class Puzzlestate:
     newp.data = copy.deepcopy(self.data)
     return newp
 
+  def answerlocation(self,itemnumber):
+    return self.data['answerlocations'][itemnumber] 
+    
   def test_word(self,word,direction,itemnumber):
 
     row_increment,col_increment = Puzzlegeometry.directions[direction]
