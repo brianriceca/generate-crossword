@@ -88,6 +88,23 @@ class Puzzlestate:
                            16,   2,   7,   1,   7, 
                            0 ]
 
+  svgc = {
+    "cellsize_mm": 12,
+    "title_height_mm": 14,
+    "offset_cluenum_x": 1,
+    "offset_cluenum_y": 3,
+    "offset_solution_x": 4,
+    "offset_solution_y": 9,
+    "block_color": "gray",
+    "highlight_color": "pink",
+    "line_color": "gray",
+    "line_width": 1,
+    "outer_line_style": "stroke-linecap: round;",
+    "cluenumber_style": "font-size:2px; font-family:Times New Roman;",
+    "solution_style": "font-size:8px; font-family:Arial;",
+    "title_style": "font-size:8px; font-family:Times New Roman;"
+  }
+
   def __init__(self,data):
     self.data = data
 
@@ -483,57 +500,57 @@ class Puzzlestate:
     _w = self.width()
     _h = self.height()
     if 'showtitle' not in kwargs or not kwargs['showtitle']:
-      Puzzlestate.config['title_height_mm'] = 0
+      Puzzlestate.svgc['title_height_mm'] = 0
 
-    Puzzlestate.config['top_margin_mm'] = Puzzlestate.config['cellsize_mm'] + Puzzlestate.config['title_height_mm']
-    Puzzlestate.config['bottom_margin_mm'] = Puzzlestate.config['cellsize_mm']
-    Puzzlestate.config['side_margin_mm'] = Puzzlestate.config['cellsize_mm']
+    Puzzlestate.svgc['top_margin_mm'] = Puzzlestate.svgc['cellsize_mm'] + Puzzlestate.svgc['title_height_mm']
+    Puzzlestate.svgc['bottom_margin_mm'] = Puzzlestate.svgc['cellsize_mm']
+    Puzzlestate.svgc['side_margin_mm'] = Puzzlestate.svgc['cellsize_mm']
 
-    Puzzlestate.config['width_mm'] = Puzzlestate.config['cellsize_mm']*_w + 2*Puzzlestate.config['side_margin_mm']
-    Puzzlestate.config['height_mm'] = (Puzzlestate.config['cellsize_mm']*_h +
-                       Puzzlestate.config['top_margin_mm'] +
-                       Puzzlestate.config['bottom_margin_mm'])
+    Puzzlestate.svgc['width_mm'] = Puzzlestate.svgc['cellsize_mm']*_w + 2*Puzzlestate.svgc['side_margin_mm']
+    Puzzlestate.svgc['height_mm'] = (Puzzlestate.svgc['cellsize_mm']*_h +
+                       Puzzlestate.svgc['top_margin_mm'] +
+                       Puzzlestate.svgc['bottom_margin_mm'])
 
     drawing = svgwrite.Drawing(filename,
-              size=(f"{Puzzlestate.config['width_mm']}mm",f"{Puzzlestate.config['height_mm']}mm"))
-    drawing.viewbox(0, 0, Puzzlestate.config['height_mm'], Puzzlestate.config['width_mm'])
+              size=(f"{Puzzlestate.svgc['width_mm']}mm",f"{Puzzlestate.svgc['height_mm']}mm"))
+    drawing.viewbox(0, 0, Puzzlestate.svgc['height_mm'], Puzzlestate.svgc['width_mm'])
 
     # draw interior horizontal lines
     for i in range(1,_h):
-      y = Puzzlestate.config['top_margin_mm'] + i * Puzzlestate.config['cellsize_mm']
+      y = Puzzlestate.svgc['top_margin_mm'] + i * Puzzlestate.svgc['cellsize_mm']
       drawing.add(drawing.line(
-                          start=(Puzzlestate.config['side_margin_mm'], y),
-                          end=(Puzzlestate.config['cellsize_mm']*_w+Puzzlestate.config['side_margin_mm'], y),
-                          stroke=Puzzlestate.config['line_color'],stroke_width=Puzzlestate.config['line_width']))
+                          start=(Puzzlestate.svgc['side_margin_mm'], y),
+                          end=(Puzzlestate.svgc['cellsize_mm']*_w+Puzzlestate.svgc['side_margin_mm'], y),
+                          stroke=Puzzlestate.config['line_color'],stroke_width=Puzzlestate.svgc['line_width']))
 
     # draw top and bottom lines
     drawing.add(drawing.line(
-                        start=(Puzzlestate.config['side_margin_mm'], Puzzlestate.config['top_margin_mm']+_h*Puzzlestate.config['cellsize_mm']),
-                        end=(Puzzlestate.config['cellsize_mm']*_w+Puzzlestate.config['side_margin_mm'], Puzzlestate.config['top_margin_mm']+_h*Puzzlestate.config['cellsize_mm']),
-                        stroke=Puzzlestate.config['line_color'],stroke_width=Puzzlestate.config['line_width'], style=Puzzlestate.config['outer_line_style']))
+                        start=(Puzzlestate.svgc['side_margin_mm'], Puzzlestate.svgc['top_margin_mm']+_h*Puzzlestate.svgc['cellsize_mm']),
+                        end=(Puzzlestate.svgc['cellsize_mm']*_w+Puzzlestate.svgc['side_margin_mm'], Puzzlestate.svgc['top_margin_mm']+_h*Puzzlestate.svgc['cellsize_mm']),
+                        stroke=Puzzlestate.svgc['line_color'],stroke_width=Puzzlestate.svgc['line_width'], style=Puzzlestate.svgc['outer_line_style']))
 
     drawing.add(drawing.line(
-                        start=(Puzzlestate.config['side_margin_mm'], Puzzlestate.config['top_margin_mm']),
-                        end=(Puzzlestate.config['cellsize_mm']*_w+Puzzlestate.config['side_margin_mm'], Puzzlestate.config['top_margin_mm']),
-                        stroke=Puzzlestate.config['line_color'],stroke_width=Puzzlestate.config['line_width'], style=Puzzlestate.config['outer_line_style']))
+                        start=(Puzzlestate.svgc['side_margin_mm'], Puzzlestate.svgc['top_margin_mm']),
+                        end=(Puzzlestate.svgc['cellsize_mm']*_w+Puzzlestate.svgc['side_margin_mm'], Puzzlestate.svgc['top_margin_mm']),
+                        stroke=Puzzlestate.svgc['line_color'],stroke_width=Puzzlestate.svgc['line_width'], style=Puzzlestate.svgc['outer_line_style']))
 
     # draw vertical lines
     for i in range(1,_w):
-      x = Puzzlestate.config['side_margin_mm'] + i * Puzzlestate.config['cellsize_mm']
+      x = Puzzlestate.svgc['side_margin_mm'] + i * Puzzlestate.svgc['cellsize_mm']
       drawing.add(drawing.line(
-                          start=(x,Puzzlestate.config['top_margin_mm']),
-                          end=(x,Puzzlestate.config['cellsize_mm']*_h+Puzzlestate.config['top_margin_mm']),
+                          start=(x,Puzzlestate.svgc['top_margin_mm']),
+                          end=(x,Puzzlestate.svgc['cellsize_mm']*_h+Puzzlestate.svgc['top_margin_mm']),
 
-                          stroke=Puzzlestate.config['line_color'],stroke_width=Puzzlestate.config['line_width']))
+                          stroke=Puzzlestate.svgc['line_color'],stroke_width=Puzzlestate.svgc['line_width']))
 
     drawing.add(drawing.line(
-                        start=(Puzzlestate.config['side_margin_mm'],Puzzlestate.config['top_margin_mm']),
-                        end=(Puzzlestate.config['side_margin_mm'], Puzzlestate.config['cellsize_mm']*_h+Puzzlestate.config['top_margin_mm']),
-                        stroke=Puzzlestate.config['line_color'],stroke_width=1,style=Puzzlestate.config['outer_line_style']))
+                        start=(Puzzlestate.svgc['side_margin_mm'],Puzzlestate.svgc['top_margin_mm']),
+                        end=(Puzzlestate.svgc['side_margin_mm'], Puzzlestate.svgc['cellsize_mm']*_h+Puzzlestate.svgc['top_margin_mm']),
+                        stroke=Puzzlestate.svgc['line_color'],stroke_width=1,style=Puzzlestate.svgc['outer_line_style']))
     drawing.add(drawing.line(
-                        start=(Puzzlestate.config['cellsize_mm']*_w+Puzzlestate.config['side_margin_mm'],Puzzlestate.config['top_margin_mm']),
-                        end=(Puzzlestate.config['cellsize_mm']*_w+Puzzlestate.config['side_margin_mm'], Puzzlestate.config['cellsize_mm']*_h + Puzzlestate.config['top_margin_mm']),
-                        stroke=Puzzlestate.config['line_color'],stroke_width=Puzzlestate.config['line_width'],style=Puzzlestate.config['outer_line_style']))
+                        start=(Puzzlestate.svgc['cellsize_mm']*_w+Puzzlestate.svgc['side_margin_mm'],Puzzlestate.svgc['top_margin_mm']),
+                        end=(Puzzlestate.svgc['cellsize_mm']*_w+Puzzlestate.svgc['side_margin_mm'], Puzzlestate.svgc['cellsize_mm']*_h + Puzzlestate.svgc['top_margin_mm']),
+                        stroke=Puzzlestate.svgc['line_color'],stroke_width=Puzzlestate.svgc['line_width'],style=Puzzlestate.svgc['outer_line_style']))
 
 
     # insert black boxes
@@ -542,11 +559,11 @@ class Puzzlestate:
         if self.getchar(row,col) == Puzzlestate.BARRIER:
           drawing.add(drawing.rect(
                            insert=(
-                                   col*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['side_margin_mm'],
-                                   row*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['top_margin_mm']
+                                   col*Puzzlestate.svgc['cellsize_mm']+Puzzlestate.svgc['side_margin_mm'],
+                                   row*Puzzlestate.svgc['cellsize_mm']+Puzzlestate.svgc['top_margin_mm']
                                   ),
-                           size=(Puzzlestate.config['cellsize_mm'],Puzzlestate.config['cellsize_mm']),
-                           fill=Puzzlestate.config['block_color']))
+                           size=(Puzzlestate.svgc['cellsize_mm'],Puzzlestate.svgc['cellsize_mm']),
+                           fill=Puzzlestate.svgc['block_color']))
 
     # insert highlights
 
@@ -559,37 +576,37 @@ class Puzzlestate:
         while i < cellcount:
           drawing.add(drawing.rect(
                            insert=(
-                                   col*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['side_margin_mm'],
-                                   row*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['top_margin_mm']
+                                   col*Puzzlestate.svgc['cellsize_mm']+Puzzlestate.svgc['side_margin_mm'],
+                                   row*Puzzlestate.svgc['cellsize_mm']+Puzzlestate.svgc['top_margin_mm']
                                   ),
-                           size=(Puzzlestate.config['cellsize_mm'],Puzzlestate.config['cellsize_mm']),
-                           fill=Puzzlestate.config['highlight_color']))
+                           size=(Puzzlestate.svgc['cellsize_mm'],Puzzlestate.svgc['cellsize_mm']),
+                           fill=Puzzlestate.svgc['highlight_color']))
           row += row_increment
           col += col_increment
           i += 1
 
     if 'showcluenumbers' in kwargs and kwargs['showcluenumbers']:
-      g = drawing.g(class_='cluenumber',style = Puzzlestate.config['cluenumber_style'])
+      g = drawing.g(class_='cluenumber',style = Puzzlestate.svgc['cluenumber_style'])
       for answer in self.data['answerlocations'].keys():
         row,col = self.data['answerlocations'][answer]
 
         g.add(drawing.text(answer,
                     insert=(
-                            col*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['side_margin_mm']+Puzzlestate.config['offset_cluenum_x'],
-                            row*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['top_margin_mm']+Puzzlestate.config['offset_cluenum_y'],
+                            col*Puzzlestate.svgc['cellsize_mm']+Puzzlestate.svgc['side_margin_mm']+Puzzlestate.svgc['offset_cluenum_x'],
+                            row*Puzzlestate.svgc['cellsize_mm']+Puzzlestate.svgc['top_margin_mm']+Puzzlestate.svgc['offset_cluenum_y'],
                            )))
       drawing.add(g)
 
     if 'showsolvedcells' in kwargs and kwargs['showsolvedcells']:
-      g = drawing.g(class_='solvedcell', style = Puzzlestate.config['solution_style'])
+      g = drawing.g(class_='solvedcell', style = Puzzlestate.svgc['solution_style'])
       for row in range(_h):
         for col in range(_w):
           c = self.getchar(row,col)
           if isinstance(c,str) and c.isalpha():
             g.add(drawing.text(c,
                     insert=(
-                            col*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['side_margin_mm']+Puzzlestate.config['offset_solution_x'],
-                            row*Puzzlestate.config['cellsize_mm']+Puzzlestate.config['top_margin_mm']+Puzzlestate.config['offset_solution_y'],
+                            col*Puzzlestate.svgc['cellsize_mm']+Puzzlestate.svgc['side_margin_mm']+Puzzlestate.svgc['offset_solution_x'],
+                            row*Puzzlestate.svgc['cellsize_mm']+Puzzlestate.svgc['top_margin_mm']+Puzzlestate.svgc['offset_solution_y'],
                            )))
       drawing.add(g)
 
@@ -598,11 +615,11 @@ class Puzzlestate:
         mytitle = self.gettitle()
       else:
         mytitle = title
-      g = drawing.g(class_='title', style = Puzzlestate.config['title_style'])
+      g = drawing.g(class_='title', style = Puzzlestate.svgc['title_style'])
       g.add(drawing.text(title,
                     insert=(
-                            Puzzlestate.config['side_margin_mm'],
-                            Puzzlestate.config['title_height_mm']
+                          Puzzlestate.svgc['side_margin_mm'],
+                          Puzzlestate.svgc['title_height_mm']
                            )))
       drawing.add(g)
 
