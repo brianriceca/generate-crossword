@@ -3,39 +3,42 @@
 operations on a crossword puzzle state
 """
 
+from typing import Dict
+from dataclasses import dataclass
 import random
 import json
 import copy
 import sys
-import os
 import logging
 import svgwrite
-from itertools import permutations
-from dataclasses import dataclass
-from typing import Dict
+
+# pylint: disable=C0301,R0903
 
 class Puzzlegeometry:
-  # Directions are defined as [rowincrement,colincrement]
+  '''Directions are defined as [rowincrement,colincrement]'''
   directions = {
     'Across': [0,1],
     'Down': [1,0]
   }
 
 def _otherdirection(d):
-  assert isinstance(d,str), f"{d} must be a string but is {type(d)}"
-  assert (d == 'Across') or (d == 'Down'), f"only valid directions are Across and Down, not {d}"
+  assert isinstance(d,str), \
+     f"{d} must be a string but is {type(d)}"
+  assert d in ('Across', 'Down'), \
+     f"only valid directions are Across and Down, not {d}"
   if d == 'Across':
     return 'Down'
   return 'Across'
 
 @dataclass(frozen=True,order=True)
 class Puzzleitem:
+  '''for example 6 Across'''
   itemnumber: int
   direction: str
   def fromlist(aslist):
     return Puzzleitem(itemnumber=int(aslist[0]),direction=str(aslist[1]))
   def fromstr(asstr):
-    i,d = asstr.split()
+    i,d = str(asstr).split()
     return Puzzleitem(itemnumber=int(i),direction=str(d))
   def __post_init__(self):
     if self.direction not in Puzzlegeometry.directions:
@@ -53,39 +56,39 @@ class Puzzlestate:
   BARRIER = '#'
   COLDSPOT = '~'
 
-  I_LIKE_VOWELS =       [ 180,   0,   0,   0, 180, 
-                            0,   0,   0, 180,   0, 
-                            0,   0,   0,   0, 180, 
-                            0,   0,   0,   0,   0, 
-                          180,   0,   0,   0,  30, 
+  I_LIKE_VOWELS =       [ 180,   0,   0,   0, 180,
+                            0,   0,   0, 180,   0,
+                            0,   0,   0,   0, 180,
+                            0,   0,   0,   0,   0,
+                          180,   0,   0,   0,  30,
                             0 ]
 
-  I_LIKE_CONSONANTS =   [   0, 100, 100, 150,   0, 
-                          100, 100, 100,   0, 100, 
-                          100, 130, 100, 160,   0, 
-                          100,  30, 160, 160, 180, 
-                            0,  70, 100,  30,  30, 
+  I_LIKE_CONSONANTS =   [   0, 100, 100, 150,   0,
+                          100, 100, 100,   0, 100,
+                          100, 130, 100, 160,   0,
+                          100,  30, 160, 160, 180,
+                            0,  70, 100,  30,  30,
                            40 ]
 
-  I_LIKE_FINALS =       [  14,   0,   6,  67,  61, 
-                            0,  60,   7,   3,   0, 
-                            3,  16,   7,  36,   5, 
-                            3,   0,  34, 180,  36, 
-                            0,   0,   0,   0,  80, 
+  I_LIKE_FINALS =       [  14,   0,   6,  67,  61,
+                            0,  60,   7,   3,   0,
+                            3,  16,   7,  36,   5,
+                            3,   0,  34, 180,  36,
+                            0,   0,   0,   0,  80,
                             0 ]
 
-  SINGLE_LETTER_FREQS = [ 127,  20,  55,  73, 180, 
-                           46,  29,  91, 118,   2, 
+  SINGLE_LETTER_FREQS = [ 127,  20,  55,  73, 180,
+                           46,  29,  91, 118,   2,
                            11,  64,  46, 118, 127,
                            20,   2,  91, 109, 135,
-                           55,  20,  37,   2,  37, 
+                           55,  20,  37,   2,  37,
                            2 ]
-  
-  PREFER_COMMON_LETTERS =  [  89,   2,  16,  29, 180, 
-                           11,   4,  46,  77,   1, 
-                           1,   22,  11,  77,  89, 
-                           2,    0,  46,  66, 101, 
-                           16,   2,   7,   1,   7, 
+
+  PREFER_COMMON_LETTERS =  [  89,   2,  16,  29, 180,
+                           11,   4,  46,  77,   1,
+                           1,   22,  11,  77,  89,
+                           2,    0,  46,  66, 101,
+                           16,   2,   7,   1,   7,
                            0 ]
 
   svgc = {
@@ -110,10 +113,14 @@ class Puzzlestate:
 
   @classmethod
   def blank(cls,height:int,width:int, title='Untitled'):
+    '''
+    populate a puzzle from a json-format file
+    '''
     if int(width) <= 0 or int(height) <= 0:
       return None
     return cls( {"dimensions": {"height": int(height),
                                 "width": int(width)},
+                 "title": title,
                  "wordsused": set(),
                  "puzzle":
                   [[Puzzlestate.UNSET for col in range(width)]
@@ -125,11 +132,12 @@ class Puzzlestate:
 
   @classmethod
   def fromjsonfile(cls,filename):
+    '''
+    populate a puzzle from a json-format file
+    '''
     def _barrier_or_unset(target,row,col):
       '''
       can be called on 'puzzle' or 'solution'
-      the advantage if used on 'puzzle' is that it doesn't treat the first
-      cell of an answer as special (just because it has a number in it)
       '''
       if data[target][row][col] == Puzzlestate.BARRIER:
         return Puzzlestate.BARRIER
@@ -138,8 +146,8 @@ class Puzzlestate:
     try:
       with open(filename,encoding='utf-8') as f:
         data = json.load(f)
-    except OSError:
-      raise RuntimeError(f'Could not read json from {filename}')
+    except Exception as e:
+      raise RuntimeError(f'Could not read json from {filename}') from e
 
     # all the validation happens here
 
@@ -175,7 +183,6 @@ class Puzzlestate:
         data['dimensions']['height'] = int(data['dimensions']['height'])
       else:
         raise RuntimeError(f"File {filename} invalid height {data['dimensions']['height']}")
-        raise RuntimeError('invalid height')
 
     if data['dimensions']['width'] <= 0:
       raise RuntimeError('width must be positive')
@@ -198,14 +205,13 @@ class Puzzlestate:
 
     if 'wordsused' not in data.keys():
       data['wordsused'] = set()
-      # TODO: detect the words in the solution, if any, and add them to the set
 
     if 'solution' not in data.keys():
       data['solution'] = copy.deepcopy(data['puzzle'])
       for row in range(height):
         for col in range(width):
           if (isinstance(data['puzzle'][row][col],int) or
-              (isinstance(data['puzzle'][row][col],str) and 
+              (isinstance(data['puzzle'][row][col],str) and
                data['puzzle'][row][col].isdigit())):
             # solution shouldn't have item numbers in the first cell of answers
             data['solution'][row][col] = Puzzlestate.UNSET
@@ -221,7 +227,7 @@ class Puzzlestate:
       data['completed_items'] = list()
     if 'incomplete_items' not in data:
       data['incomplete_items'] = list(data['items_expanded'].keys())
-  
+
     # populate data['answerlocations']; make sure any filled cells are uppercase
     # note that we store item locations by integer not by the dataclass Puzzleitem
     # because 10 Down is the same location as 10 Across
@@ -244,7 +250,8 @@ class Puzzlestate:
             # it's the start of a puzzle item, and we need to grab its number
             data['answerlocations'][thisitemno] = [row,col]
             data['puzzle'][row][col] = Puzzlestate.UNSET
-        elif isinstance(thisitemno,str): data['puzzle'][row][col] = data['puzzle'][row][col].upper()
+        elif isinstance(thisitemno,str): 
+          data['puzzle'][row][col] = data['puzzle'][row][col].upper()
         elif isinstance(thisitemno, dict):
           raise RuntimeError("I don't know how to deal with fancy cells yet")
         else:
@@ -284,9 +291,9 @@ class Puzzlestate:
 
     # now let's start to populate items_expanded
     # sample dict item:
-    # '1 Down': 
-    #  { cluetext: 'Launches', 
-    #    wordlength: 5, 
+    # '1 Down':
+    #  { cluetext: 'Launches',
+    #    wordlength: 5,
     #    location: [row,col]
     #  }
 
@@ -302,8 +309,8 @@ class Puzzlestate:
         }
 
     # we have, for each cell in any item, the 1 or 2 items that touch that cell
-    # let's transpose that into, for each item, a DICT of tuples 
-    # {                             
+    # let's transpose that into, for each item, a DICT of tuples
+    # {
     #  another_item_that_touches_this_item:     Puzzleitem
     #     (charcount_in_this_item,              counting from 0
     #      charcount_in_other_item))            counting from 0
@@ -454,7 +461,6 @@ class Puzzlestate:
     try:
       with open(filename, 'w', encoding='utf-8') as f:
         json.dump(self.data, f, indent=2, sort_keys=True, skipkeys=True, default=Puzzlestate._listify)
-    # TODO: stringify Puzzleitem's so that they can be saved (and so we don't need skipkeys)
     except OSError:
       raise RuntimeError(f'Could not write json to {filename}') from None
     self.data['wordsused'] = set(self.data['wordsused'])
@@ -465,15 +471,14 @@ class Puzzlestate:
     try:
       with open(filename, 'w', encoding='utf-8') as f:
         json.dump(self.data, f, indent=2, sort_keys=True, skipkeys=True, default=Puzzlestate._listify)
-    # TODO: stringify Puzzleitem's so that they can be saved (and so we don't need skipkeys)
     except OSError:
       raise RuntimeError(f'Could not write json to {filename}') from None
     self.data['wordsused'] = set(self.data['wordsused'])
     return self
 
   def writesvg(self,filename,**kwargs):
-    assert 'showcluenumbers' not in kwargs or isinstance(kwargs['showcluenumbers'],bool), \
-        'showcluenumbers arg must be True or False'
+    assert 'showitemnumbers' not in kwargs or isinstance(kwargs['showitemnumbers'],bool), \
+        'showitemnumbers arg must be True or False'
 
     assert 'showsolvedcells' not in kwargs or isinstance(kwargs['showsolvedcells'],bool), \
         'showsolvedcells arg must be True or False'
@@ -521,7 +526,7 @@ class Puzzlestate:
       drawing.add(drawing.line(
                           start=(Puzzlestate.svgc['side_margin_mm'], y),
                           end=(Puzzlestate.svgc['cellsize_mm']*_w+Puzzlestate.svgc['side_margin_mm'], y),
-                          stroke=Puzzlestate.config['line_color'],stroke_width=Puzzlestate.svgc['line_width']))
+                          stroke=Puzzlestate.svgc['line_color'],stroke_width=Puzzlestate.svgc['line_width']))
 
     # draw top and bottom lines
     drawing.add(drawing.line(
@@ -585,7 +590,7 @@ class Puzzlestate:
           col += col_increment
           i += 1
 
-    if 'showcluenumbers' in kwargs and kwargs['showcluenumbers']:
+    if 'showitemnumbers' in kwargs and kwargs['showitemnumbers']:
       g = drawing.g(class_='cluenumber',style = Puzzlestate.svgc['cluenumber_style'])
       for answer in self.data['answerlocations'].keys():
         row,col = self.data['answerlocations'][answer]
@@ -616,7 +621,7 @@ class Puzzlestate:
       else:
         mytitle = title
       g = drawing.g(class_='title', style = Puzzlestate.svgc['title_style'])
-      g.add(drawing.text(title,
+      g.add(drawing.text(mytitle,
                     insert=(
                           Puzzlestate.svgc['side_margin_mm'],
                           Puzzlestate.svgc['title_height_mm']
@@ -637,7 +642,7 @@ class Puzzlestate:
   def incomplete_items(self):
     '''
     return a dict of items to be solved
-    { 'item' : str : 
+    { 'item' : str :
       'wordlength' : int,
       'constraints' : [ [ index, whichchar ], ... ],
       'coldspots' : [ index, ... ]
@@ -652,7 +657,7 @@ class Puzzlestate:
 
 
     incomplete_item_list = self.data['incomplete_items']
-    
+
     helpful_item_dict = {}
 
     for item in incomplete_item_list:
@@ -673,9 +678,9 @@ class Puzzlestate:
       #    ? ? O ?
       #    # # A #
       #    ? ? T ?
-      # BOOT would lead to the same searchspace as BOAT does if the third 
+      # BOOT would lead to the same searchspace as BOAT does if the third
       # character doesn't matter
-  
+
       coldspots = []
       row,col = self.data['answerlocations'][item.itemnumber]
       if col >= self.width() or row >= self.height():
@@ -686,7 +691,7 @@ class Puzzlestate:
       else:
         port = lambda row,col: [ row, col+1 ]
         starboard = lambda row,col: [ row, col-1 ]
-  
+
       i = 0
       while True:
         if col == self.width() or row == self.height():
@@ -700,15 +705,15 @@ class Puzzlestate:
           break
         p = self.safe_getchar(*starboard(row,col))
         n = self.safe_getchar(*port(row,col))
-  
+
         if p == Puzzlestate.BARRIER and n == Puzzlestate.BARRIER:
           coldspots.append(i)
-  
+
         row += row_increment
         col += col_increment
         i += 1
       helpful_item_dict[item]['coldspots'] = coldspots
-  
+
     return helpful_item_dict
 
   def getwordsused(self):
@@ -727,8 +732,8 @@ class Puzzlestate:
     return newp
 
   def answerlocation(self,itemnumber):
-    return self.data['answerlocations'][itemnumber] 
-    
+    return self.data['answerlocations'][itemnumber]
+
   def test_word(self,word,direction,itemnumber):
 
     row_increment,col_increment = Puzzlegeometry.directions[direction]
@@ -749,68 +754,6 @@ class Puzzlestate:
       col += col_increment
     return True
 
-  def score_word(self,word_to_try,direction,itemnumber,safe=True):
-
-    return 1
-    if safe:
-      if self.test_word(word_to_try,direction,itemnumber):
-        pass
-      else:
-        raise RuntimeError(f'{word_to_try} was supposed to fit in {itemnumber} {direction}')
-
-    row_increment,col_increment = Puzzlestate.directions[direction]
-    assert direction in ('Across','Down'), \
-      f'what kind of direction is {direction}'
-    if direction == 'Across':
-      port = lambda row,col: [ row, col+1 ]
-      starboard = lambda row,col: [ row, col-1 ]
-    else:
-      port = lambda row,col: [ row+1, col ]
-      starboard = lambda row,col: [ row-1, col ]
-
-    row,col = self.data['answerlocations'][itemnumber]
-
-    # is that first space an even space or an odd space?
-
-    if row % 2:
-      if col % 2:
-        score_machine =  [lambda x: Puzzlestate.i_like_vowels[ord(x)-65] ,
-                          lambda x: Puzzlestate.i_like_cons[ord(x)-65] ]
-      else:
-        score_machine =  [lambda x: Puzzlestate.i_like_cons[ord(x)-65] ,
-                          lambda x: Puzzlestate.i_like_vowels[ord(x)-65] ]
-    else:
-      if col % 2:
-        score_machine =  [lambda x: Puzzlestate.i_like_cons[ord(x)-65] ,
-                          lambda x: Puzzlestate.i_like_vowels[ord(x)-65] ]
-      else:
-        score_machine =  [lambda x: Puzzlestate.i_like_vowels[ord(x)-65] ,
-                          lambda x: Puzzlestate.i_like_cons[ord(x)-65] ]
-
-    score = 0
-    for i,tryword in enumerate(word_to_try):
-      letter_to_starboard = self.safe_getchar(*starboard(row,col))
-      letter_to_port = self.safe_getchar(*port(row,col))
-#gotta fix this region
-      if ( (letter_to_port == Puzzlestate.BARRIER and letter_to_starboard == Puzzlestate.BARRIER) or
-           (letter_to_starboard == Puzzlestate.UNSET and letter_to_starboard == Puzzlestate.UNSET) ):
-        if len(tryword) == i:
-          score += Puzzlestate.i_like_finals[ord(c)-65]
-        else:
-          score += score_machine[i % 2](c)
-        row += row_increment
-        col += col_increment
-        continue
-      if isinstance(successor,str) and successor.isalpha():
-        score += self.letterpairfreqs[ord(c)-65][ord(successor)-65]
-      elif isinstance(predecessor,str) and predecessor.isalpha():
-        score += self.letterpairfreqs[ord(predecessor)-65][ord(c)-65]
-
-      row += row_increment
-      col += col_increment
-
-    return score
-
   def inscribe_word_in_solution(self,item,word):
     """
     returns object containing the word if it was able to inscribe it,
@@ -829,11 +772,9 @@ class Puzzlestate:
       col += col_increment
 
 
-    logging.info(f"inscribed {word} into {itemnumber} {direction}")
+    logging.info("inscribed %s into %s %s", word, itemnumber, direction)
 
     # update the constraints in items_expanded
-
-
 
     self.addwordused(word)
     return self
@@ -872,13 +813,12 @@ class Puzzlestate:
       print()
 
   def json(self):
-    listify = lambda x: list(x)
-    return json.dumps(self.data,default=listify)
+    return json.dumps(self.data,default=list)
 
   def populate_solution_from_changelist(self,changelist):
     for c in changelist:
       self.inscribe_word_in_solution(c[0],c[1])
-      
+
   def print_solution(self):
     for rowno in range(self.height()):
       for colno in range(self.width()):
@@ -922,9 +862,9 @@ class Puzzlestate:
     if len(text) == 0:
       text = 'Lorem ipsum'
     if 'clues' not in self.data:
-      self.data['clues'] = dict()
+      self.data['clues'] = ()
     if direction not in self.data['clues']:
-      self.data['clues'][direction] = list()
+      self.data['clues'][direction] = []
     self.data['clues'][direction].append([itemnumber,text])
 
 
@@ -936,10 +876,10 @@ class Puzzlestate:
           continue
         if isinstance(c,int):
           raise RuntimeError(f'hey, I found cell R{rowno}C{colno} already occupied by an item number')
-        starts_an_across = (self._safe_getcellcontents(rowno-1,colno) == Puzzlestate.BARRIER 
+        starts_an_across = (self._safe_getcellcontents(rowno-1,colno) == Puzzlestate.BARRIER
                             and
                             self._safe_getcellcontents(rowno+1,colno) != Puzzlestate.BARRIER)
-        starts_a_down = (self._safe_getcellcontents(rowno,colno-1) == Puzzlestate.BARRIER 
+        starts_a_down = (self._safe_getcellcontents(rowno,colno-1) == Puzzlestate.BARRIER
                          and
                          self._safe_getcellcontents(rowno,colno+1) != Puzzlestate.BARRIER)
         if starts_an_across or starts_a_down:
@@ -951,7 +891,7 @@ class Puzzlestate:
         if starts_an_across or starts_a_down:
           itemnumber += 1
     return self
-        
+
 def main():
   """for testing"""
   if len(sys.argv) == 1:
@@ -963,10 +903,8 @@ def main():
   print (f"sparseness is {puzzle.sparseness()}")
 
   puzzle.writesvg(f"{sourcefile}.svg",
-                  showtitle=True,
-                  showsolvedcells=True,
-                  highlight_cells=[ [ [4,7],  'Down',   6],
-                                    [ [11,9], 'Across', 3] ] )
+                  showtitle=True, showitemnumbers=True,
+                  showsolvedcells=False )
   puzzle.writejson(f"{sourcefile}.out.ipuz")
 
 if __name__ == '__main__':
