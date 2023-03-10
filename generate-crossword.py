@@ -16,7 +16,6 @@ from wordfountain import Wordfountain
 from puzzlestate import Puzzlestate, Puzzleitem
 import os.path
 import argparse
-import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-o', '--output')
@@ -46,21 +45,24 @@ def _checkerboard(row,col):
     return col % 2
   else:
     return (col+1) % 2
-    
+
 def _mask_coldspots(tryword, coldspots):
   tryword_exploded = [ x for x in tryword ]
   for loc in coldspots:
     tryword_exploded[loc] = Puzzlestate.COLDSPOT
   return ''.join(tryword_exploded)
 
+words_already_tried = dict()
+
 def completeboard(sofar,recursiondepth,sparse=False):
   global puzzle
   global items
+  global words_already_tried
 
   if recursiondepth == len(items):
     return SUCCESS # we havin steak tonight
 
-  # OK! If we are N recursions in, that means we are going to try to 
+  # OK! If we are N recursions in, that means we are going to try to
   # find a word to fill in the N'th item in items.
   target_item = items[recursiondepth]
   row,col = puzzle.answerlocation(target_item.itemnumber)
@@ -76,14 +78,14 @@ def completeboard(sofar,recursiondepth,sparse=False):
       i,w = histentry
       if i in intersectors:
         # uh oh, we might have to extract a constraint
-          native_charcount, foreign_charcount = intersectors[i]
-          if isinstance(w[foreign_charcount],str):
-            assert w[foreign_charcount] != Puzzlestate.BARRIER
-            if w[foreign_charcount] != Puzzlestate.UNSET:
-              constraints.append( ( native_charcount, w[foreign_charcount]) )
+        native_charcount, foreign_charcount = intersectors[i]
+        if isinstance(w[foreign_charcount],str):
+          assert w[foreign_charcount] != Puzzlestate.BARRIER
+          if w[foreign_charcount] != Puzzlestate.UNSET:
+            constraints.append( ( native_charcount, w[foreign_charcount]) )
 
   if len(constraints) > 0:
-    logging.info(f'... r{recursiondepth:03} with {repr(constraints)}')
+    logging.info(f'r{recursiondepth:03} ...with constraints {repr(constraints)}')
 
   # 'intersectors' values look like this:
   # {1 Down: (0, 1), 2 Down: (1, 1), 3 Down: (2, 1), 4 Down: (3, 1), 5 Down: (4, 1)}
@@ -98,7 +100,7 @@ def completeboard(sofar,recursiondepth,sparse=False):
   if constraints is not None:
     constraint_locs = [ i[0] for i in constraints ]
   constraint_locs = list(set(constraint_locs)).sort()
-    
+
   list_of_dicts = list()
 
   if sparse:
@@ -114,22 +116,22 @@ def completeboard(sofar,recursiondepth,sparse=False):
       prefer_a_vowel = True
     else:
       prefer_a_vowel = False
-      for i in range(puzzle.answerlength(target_item)):
-        if prefer_a_vowel:
-          list_of_dicts.append(I_LIKE_VOWELS)
-        else:
-          list_of_dicts.append(I_LIKE_CONSONANTS)
-        prefer_a_vowel = not prefer_a_vowel
+    for i in range(puzzle.answerlength(target_item)):
+      if prefer_a_vowel:
+        list_of_dicts.append(Puzzlestate.I_LIKE_VOWELS)
+      else:
+        list_of_dicts.append(Puzzlestate.I_LIKE_CONSONANTS)
+      prefer_a_vowel = not prefer_a_vowel
 
   assert len(list_of_dicts) == puzzle.answerlength(target_item), "yer logic is faulty"
   def _ratewordcandidate_lambda(vec):
     def _rater(w):
       score = 0
       for i,c in enumerate(w):
-        score += vec[i][c]
+        score += vec[i][ord(c)-ord('A')]
       return score
     return _rater
-  
+
   _ratewordcandidate = _ratewordcandidate_lambda(list_of_dicts)
 
   trywords = wf.matchingwords(puzzle.getlength(target_item), constraints)
@@ -137,20 +139,27 @@ def completeboard(sofar,recursiondepth,sparse=False):
     return ABORT
   trywords.sort(key=_ratewordcandidate,reverse=True)
   for trythis in trywords:
+    if target_item in words_already_tried and trythis in words_already_tried[target_item]:
+      logging.info(f"r{recursiondepth:03} ...I have already explored {trythis}")
+      break
     # OK, let's recurse with this candidate word! Will it work?!
-    logging.info(f'... r{recursiondepth:03} letz try {trythis}')
+    logging.info(f"r{recursiondepth:03} ...let's try {trythis} for {target_item}")
     sofar.append( (target_item,trythis) )
+    if target_item not in words_already_tried:
+      words_already_tried[target_item] = set()
+    words_already_tried[target_item].add(trythis)
     if (retval := completeboard(sofar,recursiondepth+1)) == SUCCESS:
       return SUCCESS # yay!
     elif retval == ABORT:
-      logging.info(f'... r{recursiondepth:03} whoa guess {trythis} was a dead end')
+      logging.info(f"r{recursiondepth:03} ...{trythis} was a dead end, caused abort")
       sofar.pop()
       break
     # well crap, forget about this word and try again with the next
-    logging.info(f'... r{recursiondepth:03} bummer, giving up on {trythis}')
+    logging.info("%03d ...giving up on %s in %s, on to the next possibility", 
+                  recursiondepth, trythis, target_item)
     sofar.pop()
   # if we make it here, that means all the candidate words were failures
-  logging.info(f'... r{recursiondepth:03} bigtime bummer, I used up all the words')
+  logging.info(f'r{recursiondepth:03} ...used up all the possible words')
   return FAILURE
 
 puzzle = dict()

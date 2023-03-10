@@ -35,6 +35,8 @@ class Puzzleitem:
   '''for example 6 Across'''
   itemnumber: int
   direction: str
+
+  # pylint: disable=no-self-argument
   def fromlist(aslist):
     return Puzzleitem(itemnumber=int(aslist[0]),direction=str(aslist[1]))
   def fromstr(asstr):
@@ -236,27 +238,27 @@ class Puzzlestate:
       for col in range(width):
         # first, let's determine whether what's here is an item number,
         # and make sure it is an integer if it is
-        thisitemno = data['puzzle'][row][col]
-        if (isinstance(thisitemno,int) or
-            isinstance(thisitemno,str) and thisitemno.isdigit()):
-          data['puzzle'][row][col] = int(thisitemno)
+        cellcontents = data['puzzle'][row][col]
+        if (isinstance(cellcontents,int) or
+            isinstance(cellcontents,str) and cellcontents.isdigit()):
+          data['puzzle'][row][col] = int(cellcontents)
           thisitemno = data['puzzle'][row][col]
           if thisitemno < 0:
-            raise RuntimeError(f'whoa, item numbers must be positive, unlike [{row},{col}], which is {thisitemno}')
-          elif thisitemno == 0:
+            raise RuntimeError(
+ f'whoa, item numbers must be positive, unlike [{row},{col}], which is {thisitemno}')
+          if thisitemno == 0:
             # it's an empty cell
             data['puzzle'][row][col] = Puzzlestate.UNSET
           else:
             # it's the start of a puzzle item, and we need to grab its number
             data['answerlocations'][thisitemno] = [row,col]
             data['puzzle'][row][col] = Puzzlestate.UNSET
-        elif isinstance(thisitemno,str): 
+        elif isinstance(cellcontents,str): 
           data['puzzle'][row][col] = data['puzzle'][row][col].upper()
-        elif isinstance(thisitemno, dict):
+        elif isinstance(cellcontents, dict):
           raise RuntimeError("I don't know how to deal with fancy cells yet")
         else:
-          raise RuntimeError(f"weird cell content: [{row},{col}] is {thisitemno}, type {type(cellcontents)}")
-
+          raise RuntimeError(f"weird cell content: [{row},{col}] is {cellcontents}, type {type(cellcontents)}")
     # now squirrel away the length of the answer for each item,
     # as well as, for each [row,col] all the items that touch that space
 
@@ -322,7 +324,7 @@ class Puzzlestate:
         row,col = data['answerlocations'][itemnumber]
         thisitem = Puzzleitem(itemnumber=itemnumber, direction=direction)
         n = 0
-        intersectors = dict()
+        intersectors = {}
         while True:
           if (intersectorlist := data['items_that_touch_cell'][row][col]):
             for i,n2 in intersectorlist:
@@ -453,18 +455,6 @@ class Puzzlestate:
       return [ x.itemnumber, x.direction ]
     else:
       return list(x)
-
-  def writejson(self,filename):
-    tempcopy = copy.deepcopy(self.data)
-    tempcopy['wordsused'] = list(tempcopy['wordsused'])
-    tempcopy['answerlengths'] = {f'{k.itemnumber} {k.direction}': tempcopy['answerlengths'][k] for k in tempcopy['answerlengths']}
-    try:
-      with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(self.data, f, indent=2, sort_keys=True, skipkeys=True, default=Puzzlestate._listify)
-    except OSError:
-      raise RuntimeError(f'Could not write json to {filename}') from None
-    self.data['wordsused'] = set(self.data['wordsused'])
-    return self
 
   def writejson(self,filename):
     self.data['wordsused'] = list(self.data['wordsused'])
@@ -852,21 +842,18 @@ class Puzzlestate:
     if (rowno < 0 or rowno >= self.height() or
         colno < 0 or colno >= self.width()) :
       return Puzzlestate.BARRIER
-    else:
-      return self.data['puzzle'][rowno][colno]
+    return self.data['puzzle'][rowno][colno]
 
-
-  def upsert_item_text(self,itemnumber,direction,text=''):
-    if direction not in Puzzlegeometry.directions:
-      raise RuntimeError(f"{direction} is not a direction")
+  def upsert_item_text(self,item,text=''):
+    """takes a puzzle clue text, like Nick and Nora's dog, and inscribes it"""
+    assert isinstance(item,Puzzleitem), f"{item} is not an item"
     if len(text) == 0:
       text = 'Lorem ipsum'
     if 'clues' not in self.data:
       self.data['clues'] = ()
     if direction not in self.data['clues']:
       self.data['clues'][direction] = []
-    self.data['clues'][direction].append([itemnumber,text])
-
+    self.data['clues'][item.direction].append(item.itemnumber,text)
 
   def insert_item_numbers(self):
     itemnumber = 1
