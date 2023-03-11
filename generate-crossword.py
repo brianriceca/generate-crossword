@@ -161,8 +161,10 @@ def completeboard(sofar,recursiondepth,sparse=False):
       sofar.pop()
 
   # if we make it here, that means all the candidate words were failures
-  logging.info(f'r{recursiondepth:03} ...used up all the possible words')
+  # so we have to choose a different word and try again
+  logging.info('%03d ...used up all the possible words, going to reshuffle',recursiondepth)
   if recursiondepth + 1 == length(items)
+    logging.info('%03d ...nothing to reshuffle, ugh',recursiondepth)
     raise RuntimeError('dang')
   items[recursiondepth], items[recursiondepth+1] = items[recursiondepth+1], items[recursiondepth] 
   return NO_WORDS_MATCH
