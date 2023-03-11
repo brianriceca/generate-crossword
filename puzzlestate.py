@@ -105,7 +105,7 @@ class Puzzlestate:
     "line_color": "gray",
     "line_width": 1,
     "outer_line_style": "stroke-linecap: round;",
-    "cluenumber_style": "font-size:2px; font-family:Times New Roman;",
+    "cluenumber_style": "font-size:4px; font-family:Times New Roman; font-weight:bold",
     "solution_style": "font-size:8px; font-family:Arial;",
     "title_style": "font-size:8px; font-family:Times New Roman;"
   }
