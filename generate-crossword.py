@@ -42,9 +42,16 @@ def _checkerboard(row,col):
   else:
     return (col+1) % 2
 
-def _stick_back_in_deck(l):
-  oldfirst = l.pop(0)
-  l.insert(int(len(l)/2+0.5),oldfirst)
+# class puzzlesolution:
+#   def __init__(self, itemlist):
+#     self.itemlist = itemlist 
+#    self.solution_trail = []
+#   def shuffle_the_future:
+#     where_to_start = len(self.solution_trail)
+#     end_of_list = len(self.itemlist)-1
+#     for i in reversed(xrange(where_to_start+1, end_of_list)):
+#       j = random.randint(startIdx, i)
+#       x[i], x[j] = x[j], x[i]
 
 paths_already_explored = set()
 
