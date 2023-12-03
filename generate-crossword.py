@@ -13,9 +13,9 @@ from os import getpid
 from wordfountain import Wordfountain
 from puzzlestate import Puzzlestate, Puzzleitem
 
-SUCCESS = 1
-NO_WORDS_MATCH = 0
-PRUNE_THIS_BRANCH = -1
+SUCCESS = -1
+TRY_A_DIFFERENT_WORD = 0
+# a recursive return value of N>0 means that we need to backtrack N times
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-o', '--output')
@@ -34,7 +34,7 @@ if outfilename is None:
   if infilename.rfind('.ipuz') == -1:
     outfilename = infilename + '-out.ipuz'
   else:
-    outfilename = (infilename[::-1].replace('zupi.','zupi.tou-',1))[::-1]
+    outfilename = (infilename[::-1].replace('zupi.','zupi.tuo-',1))[::-1]
 
 def _checkerboard(row,col):
   if row % 2:
@@ -74,10 +74,12 @@ def completeboard(sofar,recursiondepth,sparse=False):
   # inscribed that create a constraint for us.
   constraints = list()
   intersectors = puzzle.getintersectors(target_item)
+  latest_intersector_depth = recursiondepth
   if intersectors is not None:
     for histentry in sofar:  
-      #histentries look like ("5 Across","MAPLE")
-      i,w = histentry
+      # a histentry looks like ("5 Across","MAPLE",6)
+      # where the 6 means that this word got proposed as part of the solution 6 steps deep
+      i,w,d = histentry
       if i in intersectors:
         # uh oh, we might have to extract a constraint
         native_charcount, foreign_charcount = intersectors[i]
@@ -85,19 +87,8 @@ def completeboard(sofar,recursiondepth,sparse=False):
           assert w[foreign_charcount] != Puzzlestate.BARRIER
           if w[foreign_charcount] != Puzzlestate.UNSET:
             constraints.append( ( native_charcount, w[foreign_charcount]) )
+            latest_intersector_depth = d
 
-  if len(constraints) > 0:
-
-    # Have we already been down this path? Abort immediately if so.
-    lets_explore = f"{recursiondepth} {target_item} {constraints}"
-    if lets_explore in paths_already_explored:
-      logging.info("%03d already explored %s, aborting",
-                 recursiondepth, lets_explore)
-      return NO_WORDS_MATCH
-    else:
-      paths_already_explored.add(lets_explore)
-
-  # 'intersectors' values look like this:
   # {1 Down: (0, 1), 2 Down: (1, 1), 3 Down: (2, 1), 4 Down: (3, 1), 5 Down: (4, 1)}
   intersection_locs = None
   if intersectors is not None:
@@ -147,23 +138,29 @@ def completeboard(sofar,recursiondepth,sparse=False):
 
   trywords = wf.matchingwords(puzzle.getlength(target_item), constraints)
   if len(trywords) == 0:
-    return NO_WORDS_MATCH
+    logging.info("%03d ...no words match, thanks to a word inserted at depth %d",
+                recursiondepth, latest_intersector_depth)
+    return recursiondepth - latest_intersector_depth
+
   trywords.sort(key=_ratewordcandidate,reverse=True)
   for trythis in trywords:
     logging.info("%03d ...let's try %s for %s", 
                 recursiondepth, trythis, target_item)
-    sofar.append( (target_item,trythis) )
+    sofar.append( (target_item,trythis, recursiondepth) )
     if (retval := completeboard(sofar,recursiondepth+1)) == SUCCESS:
       return SUCCESS # yay!
-    elif retval == NO_WORDS_MATCH:
-      logging.info("%03d ...giving up on %s in %s, let's try this again later ", 
-                  recursiondepth, trythis, target_item)
+    elif retval > 0:
+      logging.info("%03d ...just got a retval of %d",
+                  recursiondepth, retval)
       sofar.pop()
+      return retval-1
+    sofar.pop()
+    # and around the loop we go
 
   # if we make it here, that means all the candidate words were failures
   # so we have to choose a different word and try again
   logging.info('%03d ...used up all the possible words, going to reshuffle',recursiondepth)
-  if recursiondepth + 1 == length(items)
+  if recursiondepth + 1 == length(items):
     logging.info('%03d ...nothing to reshuffle, ugh',recursiondepth)
     raise RuntimeError('dang')
   items[recursiondepth], items[recursiondepth+1] = items[recursiondepth+1], items[recursiondepth] 
