@@ -11,7 +11,7 @@ import os.path
 import argparse
 from os import getpid
 from wordfountain import Wordfountain
-from puzzlestate import Puzzlestate, Puzzleitem
+from puzzlestate import Puzzlestate
 
 SUCCESS = -1
 TRY_A_DIFFERENT_WORD = 0
@@ -36,7 +36,7 @@ if outfilename is None:
   else:
     outfilename = (infilename[::-1].replace('zupi.','zupi.tuo-',1))[::-1]
 
-def _checkerboard(row,col):
+def _checkerboard(row: int,col: int) -> int:
   if row % 2:
     return col % 2
   else:
@@ -53,9 +53,9 @@ def _checkerboard(row,col):
 #       j = random.randint(startIdx, i)
 #       x[i], x[j] = x[j], x[i]
 
-paths_already_explored = set()
+paths_already_explored: set[list] = set()
 
-def completeboard(sofar,recursiondepth,sparse=False):
+def completeboard(sofar,recursiondepth,sparse=False) -> int:
   global puzzle
   global items
   global paths_already_explored
@@ -97,10 +97,10 @@ def completeboard(sofar,recursiondepth,sparse=False):
 
   # constraints values look like this:
   # [(0, 'R'), (1, 'S'), (2, 'R'), (3, 'R'), (4, 'S')]
-  constraint_locs = None
-  if constraints is not None:
-    constraint_locs = [ i[0] for i in constraints ]
-  constraint_locs = list(set(constraint_locs)).sort()
+  constraint_locs = []
+  if len(constraints):
+    constraint_locs: list[int] = [ i[0] for i in constraints ]
+    constraint_locs = list(set(constraint_locs)).sort()
 
   list_of_dicts = list()
 
